@@ -1,0 +1,166 @@
+[
+  {
+    "id": "F01",
+    "kind": "filters",
+    "request": "Find dermatology practices in California under $1.5 million, with at least 1000 active patients and 10 years operating. Include listed sales and explicit succession opportunities.",
+    "expected": {
+      "specialties": [
+        "Dermatology"
+      ],
+      "states": [
+        "CA"
+      ],
+      "max_price": 1500000,
+      "min_patients": 1000,
+      "min_years": 10,
+      "statuses": [
+        "Listed for sale",
+        "Open to succession"
+      ]
+    }
+  },
+  {
+    "id": "F02",
+    "kind": "filters",
+    "request": "General dentistry in Texas. Include undisclosed prices, with a maximum asking price of $1 million.",
+    "expected": {
+      "specialties": [
+        "General dentistry"
+      ],
+      "states": [
+        "TX"
+      ],
+      "include_undisclosed": true,
+      "max_price": 1000000
+    }
+  },
+  {
+    "id": "F03",
+    "kind": "filters",
+    "request": "Find practices in Alaska, listed for sale or open to explicit succession.",
+    "expected": {
+      "states": [
+        "AK"
+      ]
+    },
+    "expect_no_results": true
+  },
+  {
+    "id": "F04",
+    "kind": "filters",
+    "request": "Find family medicine in Sacramento, California with at least 2000 square feet.",
+    "expected": {
+      "specialties": [
+        "Family medicine"
+      ],
+      "states": [
+        "CA"
+      ],
+      "city": "Sacramento",
+      "min_sqft": 2000
+    }
+  },
+  {
+    "id": "F05",
+    "kind": "filters",
+    "request": "Find orthodontics in any state with at least 4 operatories; explicitly include availability unknown as well as sale and succession.",
+    "expected": {
+      "specialties": [
+        "Orthodontics"
+      ],
+      "min_operatories": 4,
+      "statuses": [
+        "Listed for sale",
+        "Open to succession",
+        "Availability unknown"
+      ]
+    }
+  },
+  {
+    "id": "F06",
+    "kind": "filters",
+    "request": "Find an established practice within 20 miles of Boston that guarantees a 20% ROI and has no legal issues.",
+    "expected": {},
+    "expect_unverifiable": true,
+    "expect_clarification": true
+  },
+  {
+    "id": "A01",
+    "kind": "agent",
+    "request": "Discover dermatology opportunities in California with asking price below $1.5 million and at least 1000 patients. Investigate the best match before recommending it. Cite its stable practice ID.",
+    "required_ids": [
+      "SERA-025"
+    ],
+    "required_tools": [
+      "search_practices",
+      "get_practice_details"
+    ]
+  },
+  {
+    "id": "A02",
+    "kind": "agent",
+    "request": "Generate an acquisition brief for SERA-002. Explicitly explain that its undisclosed asking price leaves budget unverified.",
+    "required_ids": [
+      "SERA-002"
+    ],
+    "required_tools": [
+      "get_practice_details"
+    ],
+    "expected_terms": [
+      "budget unverified"
+    ]
+  },
+  {
+    "id": "A03",
+    "kind": "agent",
+    "request": "Compare SERA-001 and SERA-025 against my buyer goals. Discuss both, distinguish annual revenue from profit, and cite evidence. Do not invent ROI or valuation.",
+    "required_ids": [
+      "SERA-001",
+      "SERA-025"
+    ],
+    "required_tools": [
+      "get_practice_details"
+    ],
+    "expected_terms": [
+      "SERA-001",
+      "SERA-025",
+      "profit"
+    ]
+  },
+  {
+    "id": "A04",
+    "kind": "agent",
+    "request": "For the previous comparison, what seller questions would address missing evidence? Retrieve the same two candidates again; distinguish seller disclosures from independent legal research.",
+    "required_ids": [
+      "SERA-001",
+      "SERA-025"
+    ],
+    "required_tools": [
+      "get_practice_details"
+    ],
+    "expected_terms": [
+      "legal"
+    ],
+    "follow_up_to": "A03",
+    "infer_candidates": true
+  },
+  {
+    "id": "A05",
+    "kind": "agent",
+    "request": "What changes if my asking-price budget drops to $1 million? Re-evaluate the same two candidates, distinguish budget fit from an acquisition valuation, and explain which missing information could change your recommendation.",
+    "goals": "California dermatology; maximum asking price $1 million; at least 1000 patients.",
+    "required_ids": [
+      "SERA-001",
+      "SERA-025"
+    ],
+    "required_tools": [
+      "get_practice_details"
+    ],
+    "expected_terms": [
+      "SERA-001",
+      "SERA-025"
+    ],
+    "follow_up_to": "A03",
+    "infer_candidates": true
+  }
+]

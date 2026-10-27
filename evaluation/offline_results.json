@@ -1,0 +1,109 @@
+{
+  "timestamp_utc": "2026-10-27T23:27:51.009401+00:00",
+  "mode": "offline",
+  "model": null,
+  "cases": [
+    {
+      "id": "F01",
+      "kind": "filters",
+      "mode": "offline",
+      "matched_ids": [
+        "SERA-025"
+      ],
+      "status": "passed",
+      "failures": [],
+      "elapsed_seconds": 0.0
+    },
+    {
+      "id": "F02",
+      "kind": "filters",
+      "mode": "offline",
+      "matched_ids": [],
+      "status": "passed",
+      "failures": [],
+      "elapsed_seconds": 0.0
+    },
+    {
+      "id": "F03",
+      "kind": "filters",
+      "mode": "offline",
+      "matched_ids": [],
+      "status": "passed",
+      "failures": [],
+      "elapsed_seconds": 0.0
+    },
+    {
+      "id": "F04",
+      "kind": "filters",
+      "mode": "offline",
+      "matched_ids": [],
+      "status": "passed",
+      "failures": [],
+      "elapsed_seconds": 0.0
+    },
+    {
+      "id": "F05",
+      "kind": "filters",
+      "mode": "offline",
+      "matched_ids": [
+        "SERA-003",
+        "SERA-019",
+        "SERA-027",
+        "SERA-035",
+        "SERA-043"
+      ],
+      "status": "passed",
+      "failures": [],
+      "elapsed_seconds": 0.0
+    },
+    {
+      "id": "F06",
+      "kind": "filters",
+      "mode": "offline",
+      "status": "skipped",
+      "reason": "Clarification and unsupported-language handling require live extraction.",
+      "elapsed_seconds": 0.0
+    },
+    {
+      "id": "A01",
+      "kind": "agent",
+      "mode": "offline",
+      "status": "skipped",
+      "reason": "Agent quality requires a live model; offline graph wiring is tested by pytest.",
+      "elapsed_seconds": 0.0
+    },
+    {
+      "id": "A02",
+      "kind": "agent",
+      "mode": "offline",
+      "status": "skipped",
+      "reason": "Agent quality requires a live model; offline graph wiring is tested by pytest.",
+      "elapsed_seconds": 0.0
+    },
+    {
+      "id": "A03",
+      "kind": "agent",
+      "mode": "offline",
+      "status": "skipped",
+      "reason": "Agent quality requires a live model; offline graph wiring is tested by pytest.",
+      "elapsed_seconds": 0.0
+    },
+    {
+      "id": "A04",
+      "kind": "agent",
+      "mode": "offline",
+      "status": "skipped",
+      "reason": "Agent quality requires a live model; offline graph wiring is tested by pytest.",
+      "elapsed_seconds": 0.0
+    },
+    {
+      "id": "A05",
+      "kind": "agent",
+      "mode": "offline",
+      "status": "skipped",
+      "reason": "Agent quality requires a live model; offline graph wiring is tested by pytest.",
+      "elapsed_seconds": 0.0
+    }
+  ],
+  "note": "Automated checks are narrow proxies, not proof of answer correctness. Offline mode makes no model calls."
+}
