@@ -9,7 +9,7 @@ October 27, 2026. This record applies only to this restored full-product working
 - Ruff lint passed; all 29 product, script and test Python files passed formatting. Ignored diagnostic scripts in `local_data` are outside the product formatting check.
 - Offline evaluation: **5 passed, 6 skipped**. The skipped cases require a live model; they were not counted as successes.
 - The shared environment emitted 13 upstream LangSmith deprecation warnings. Tests disabled third-party pytest plugin autoload because that shared environment still contains an old Phoenix plugin. Phoenix is not required by this product.
-- A fresh macOS Python 3.14 installation from the pinned requirements is now verified in the GitHub preparation checks below. Windows file locking and GitHub-hosted Linux execution remain unverified.
+- Fresh macOS and GitHub-hosted Ubuntu 24.04 Python 3.14 installations from the pinned requirements are now verified in the GitHub preparation checks below. Windows file locking remains unverified.
 
 These checks verify controlled behavior. They are not a model accuracy score, a security audit or a production deployment check.
 
@@ -18,10 +18,10 @@ These checks verify controlled behavior. They are not a model accuracy score, a 
 - Installed `requirements-dev.txt` from PyPI into a new isolated Python 3.14 environment without system site packages or the existing SERA environment. Installation succeeded; `pip check` found no broken requirements.
 - In that environment, **183 tests passed in 10.45 seconds**, Ruff lint passed, and all 29 Python files passed formatting. The offline evaluation returned **5 passed, 6 skipped**; it made no model calls. Thirteen upstream LangSmith deprecation warnings remain.
 - Added a product-first README, a five-minute manual walkthrough plus optional AI journey, and five current screenshots under `docs/images/`. Fresh Explore and Shortlists captures show the current catalog and named candidates. Documentation keeps fictional-data disclosures and observed AI interpretation limitations explicit.
-- Added the MIT license and a GitHub Actions workflow for Python 3.14 on Ubuntu 24.04: isolated installation, dependency consistency, tests, lint, formatting and offline evaluation. Actions are pinned to verified release commits, repository permissions are read-only, and checks need no model or API key. The workflow has not run on GitHub yet.
+- Added the MIT license and a GitHub Actions workflow for Python 3.14 on Ubuntu 24.04: isolated installation, dependency consistency, tests, lint, formatting and offline evaluation. Actions are pinned to verified release commits, repository permissions are read-only, and checks need no model or API key. The first [GitHub run](https://github.com/shefali-parmar/sera-acquisition-workspace/actions/runs/40603221842), for commit `180adb5`, completed successfully.
 - Initialized a local repository on `main`. Reviewed all 50 staged files: a pattern scan found no embedded credential tokens, private keys, authenticated URLs or personal absolute paths. Ignore checks excluded `.env`, environment variants, Streamlit secrets, saved lists, caches and virtual environments. This is a targeted release scan, not a comprehensive security audit.
 - Exported only staged files to a separate directory and launched that export using the fresh environment, with provider settings and API keys removed. The real browser showed 50 fictional practices, 49 default matches, disabled AI actions and functioning browsing. Opened Riverbend's complete profile, created a first named list and saved it atomically, then confirmed Riverbend in Shortlists. The test used only the export's own local storage. Proof is retained locally at `local_data/release-check/first-run-save.jpg`.
-- Repository preparation is local. No GitHub remote or public hosting was created; GitHub Actions execution remains pending the first push. This preparation does not establish AI accuracy.
+- Published this standalone product demo to the new public repository [shefali-parmar/sera-acquisition-workspace](https://github.com/shefali-parmar/sera-acquisition-workspace), on `main`, with its own Git history. Verified the remote repository identity and public visibility independently through GitHub. No public application hosting was created. This preparation does not establish AI accuracy.
 
 ## Real browser journey
 
@@ -130,4 +130,4 @@ The non-AI product journey is working in the verified local browser. AI synthesi
 
 Before presenting AI recommendations as dependable, a separate bounded semantic-quality pass should address hard-cap labels, source-to-claim support and unsupported comparative judgments. Public hosting also needs authentication and separate user storage. Conversations and assessments currently remain session-only.
 
-No repository was published, no public deployment was created, and no event application was submitted. No private `.env` was copied into this product directory.
+The product repository is published as recorded above; no public application deployment was created and no event application was submitted. No private `.env` was copied into this product directory.

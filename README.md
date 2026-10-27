@@ -1,5 +1,7 @@
 # SERA
 
+[![Checks](https://github.com/shefali-parmar/sera-acquisition-workspace/actions/workflows/checks.yml/badge.svg)](https://github.com/shefali-parmar/sera-acquisition-workspace/actions/workflows/checks.yml)
+
 A local workspace for exploring medical and dental practice acquisitions, building shortlists, and working through commercial property decisions.
 
 **Portfolio demo · 50 fictional practices · Single-user local application**
@@ -19,7 +21,7 @@ The catalog includes 40 leased and 10 owned-premises scenarios. One practice pri
 
 ## Run locally
 
-Use **Python 3.14**. A fresh isolated installation was verified on macOS with Python 3.14, including a clean dependency check, 183 passing tests, lint and formatting. These commands also use the usual Linux environment syntax; Linux and Windows installation have not been independently verified.
+Use **Python 3.14**. Fresh isolated installations and all 183 tests passed on macOS and Ubuntu 24.04 (GitHub Actions), with dependency, lint and formatting checks. Windows installation has not been independently verified.
 
 ```sh
 python3.14 -m venv .venv
