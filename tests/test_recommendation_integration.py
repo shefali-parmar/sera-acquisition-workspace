@@ -178,3 +178,42 @@ def test_subtotal_supplied_to_model_uses_separate_known_asking_prices_only():
     for pid in ("SERA-001", "SERA-002"):
         record = json.loads(ai.get_practice_details.invoke({"practice_id": pid}))
         assert "calculated_amounts" not in record
+
+
+@pytest.mark.parametrize(
+    ("question", "answer"),
+    [
+        (
+            "For SERA-025, give the business and property prices and combined subtotal. Can I call it legally cleared?",
+            "Elmbrook Skin Center practice asking price is $1,150,000 [SERA-025-S1]. "
+            "Property asking price is $392,000 [SERA-025-S5]. "
+            "Its combined asking-price subtotal is $1,542,000 [SERA-025-S1] [SERA-025-S5]. "
+            "**Property included in the business price?** No. "
+            'You cannot describe Elmbrook Skin Center as "legally cleared" [SERA-025-S6].',
+        ),
+        (
+            "For SERA-001 and SERA-002, is landlord consent obtained and are they legally cleared?",
+            "**Legally cleared:** No. Neither transaction has independent clearance "
+            "[SERA-001-S6] [SERA-002-S6]. "
+            "Riverbend Dermatology landlord consent has not been obtained [SERA-001-S5]. "
+            "Torrey Pines Family Dentistry landlord consent has not been obtained [SERA-002-S5].",
+        ),
+    ],
+)
+def test_valid_property_and_legal_denials_complete_without_unnecessary_repair(
+    monkeypatch, question, answer
+):
+    requests = scripted(monkeypatch, [answer])
+    result = ai.investigate(question, "")
+    assert result["status"] == "complete"
+    assert result["warnings"] == []
+    assert len(requests) == 1
+    assert answer in result["answer"]
+
+
+def test_operator_diagnostics_never_log_raw_input_drafts_or_provider_errors(caplog):
+    ai._log_incomplete(
+        "evidence_checks", ["The answer was truncated", "Cite a source secret-sentinel"]
+    )
+    assert "output_length" in caplog.text and "source_reference" in caplog.text
+    assert "secret-sentinel" not in caplog.text

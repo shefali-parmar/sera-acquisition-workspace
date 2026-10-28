@@ -211,3 +211,34 @@ def test_unqualified_asking_price_subtotal_is_not_assumed_combined(records):
     assert not record_claim_issues(
         "SERA-025 asking-price subtotal is $1,150,000 [SERA-025-S1].", records
     )
+
+
+@pytest.mark.parametrize(
+    "answer",
+    [
+        "**Legally cleared:** No. Neither transaction has independent clearance [SERA-001-S6] [SERA-002-S6].",
+        "**Property included in the business price?** No. Elmbrook Skin Center property is separately priced [SERA-025-S5].",
+        'You cannot describe Elmbrook Skin Center as "legally cleared" [SERA-025-S6].',
+        "You cannot describe Elmbrook Skin Center as “legally cleared” [SERA-025-S6].",
+        "Neither transaction is legally cleared [SERA-001-S6] [SERA-002-S6].",
+        "**Landlord consent obtained:** No [SERA-001-S5].",
+        "**Property included in the business price:** No [SERA-025-S5].",
+        "Riverbend Dermatology is **not legally cleared** [SERA-001-S6].",
+    ],
+)
+def test_denied_assurances_survive_quotes_and_markdown(records, answer):
+    assert not record_claim_issues(answer, records)
+
+
+@pytest.mark.parametrize(
+    "answer",
+    [
+        "**Legally cleared:** Yes [SERA-001-S6].",
+        "**Landlord consent obtained:** Yes [SERA-001-S5].",
+        "**Property included in the business price:** Yes [SERA-025-S5].",
+        'Do not assume clearance. Riverbend Dermatology is "legally cleared" [SERA-001-S6].',
+        "**Legally cleared?** Yes. Riverbend Dermatology is legally cleared [SERA-001-S6].",
+    ],
+)
+def test_formatted_positive_assurances_remain_rejected(records, answer):
+    assert record_claim_issues(answer, records)

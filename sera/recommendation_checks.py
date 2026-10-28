@@ -65,10 +65,11 @@ def _guidance(text: str) -> bool:
 
 def _negated(text: str, start: int) -> bool:
     prefix = text[max(0, start - 80) : start].replace("’", "'")
+    prefix = re.sub(r'["“”‘*`]+', "", prefix)
     # Keep negation local; unrelated earlier disclaimers cannot exempt a later claim.
     return bool(
         re.search(
-            r"\b(?:no|not|never|cannot|can't|without|isn't|aren't|wasn't|hasn't|haven't)"
+            r"\b(?:no|not|never|neither|cannot|can't|without|isn't|aren't|wasn't|hasn't|haven't)"
             r"(?:\s+[\w'-]+){0,6}\s*$",
             prefix,
             re.I,
@@ -77,7 +78,10 @@ def _negated(text: str, start: int) -> bool:
 
 
 def _denied_after(text: str) -> bool:
-    text = text.replace("’", "'")
+    text = re.sub(r'["“”‘*`]+', "", text.replace("’", "'"))
+    # A denied answer label ("Legally cleared: No") is not an assurance.
+    if re.match(r"\s*:\s*(?:no|not|unknown|unverified)\b", text, re.I):
+        return True
     return bool(
         re.match(
             r"\s+(?:(?:is|are|was|were)\s+)?(?:not\s+(?:supported|established|verified|recorded)|"
@@ -129,7 +133,7 @@ def _assurance_issues(text: str, record: dict | None) -> list[str]:
             text,
             re.I,
         ):
-            if not _negated(text, match.start()):
+            if not _negated(text, match.start()) and not _denied_after(text[match.end() :]):
                 issues.append("Property is separately priced, not included in the practice price.")
     return issues
 
@@ -345,6 +349,8 @@ def record_claim_issues(answer: str, records: dict[str, dict]) -> list[str]:
     """
     issues, headers = [], []
     for line in answer.splitlines():
+        # Markdown emphasis must not change sentence boundaries or negation.
+        line = re.sub(r"\*\*|__|`", "", line)
         is_table = line.strip().startswith("|") and line.strip().endswith("|")
         if is_table:
             cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
