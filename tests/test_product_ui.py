@@ -833,3 +833,17 @@ def test_assessment_names_and_readable_owned_sources_preserve_internal_snapshot(
     # Unknown evidence is never relabeled as a valid source.
     assert "[SERA-001-S99]" in displayed
     assert "### AI Interpretation" in original and "[SERA-001-S1]" in original
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        (r"Matched (price cap $\le \$1.2\text{M}$)", r"Matched (price cap ≤ \$1.2M)"),
+        (r"Price $\lt $650,000$", r"Price < \$650,000"),
+        (r"Price $\geq \$650k$", r"Price ≥ \$650k"),
+    ],
+)
+def test_ai_currency_comparison_math_becomes_readable_text(text, expected):
+    from app import buyer_answer_markdown
+
+    assert buyer_answer_markdown(text) == expected

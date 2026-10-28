@@ -70,6 +70,15 @@ def run_analysis(key: str, question: str, ids: list[str], signature: tuple) -> N
 def buyer_answer_markdown(answer: str) -> str:
     """Present named practices and readable references while retaining raw evidence internally."""
     answer = re.sub(r"\bAI interpretation\b", "SERA's Interpretation", answer, flags=re.I)
+    # Convert the model's common currency comparison math to plain text before
+    # protecting dollar amounts from Streamlit's inline-math interpretation.
+    relations = {"le": "≤", "leq": "≤", "ge": "≥", "geq": "≥", "lt": "<", "gt": ">"}
+    answer = re.sub(
+        r"\$\s*\\(leq?|geq?|lt|gt)\s*\\?\$?\s*"
+        r"(\d[\d,.]*)(?:\s*\\text\{([kKmM])\}|([kKmM]))?\s*\$",
+        lambda match: relations[match[1]] + " $" + match[2] + (match[3] or match[4] or ""),
+        answer,
+    )
     for practice in load_practices():
         pid, name = re.escape(practice.id), re.escape(practice.name)
         # Clean older snapshots that printed both a name and its internal identifier.
