@@ -19,6 +19,7 @@ from sera.catalog import (
 from sera.design import APP_CSS
 from sera.models import Filters, Practice, SavedStore
 from sera.practice_views import missing_information, render_practice_details
+from sera.public_demo import DemoLimitError, public_demo_enabled, reserve_ai_request
 from sera.search_views import (
     browse_identity,
     criteria_summary,
@@ -26,7 +27,7 @@ from sera.search_views import (
     sort_options,
     sorted_practices,
 )
-from sera.storage import ListStorage, StorageError
+from sera.storage import ListStorage, SessionListStorage, StorageError
 from sera.workspace_views import WorkspaceCallbacks, render_assistant, render_shortlists
 
 
@@ -43,13 +44,21 @@ def effective_goals() -> str:
     )
 
 
+def guarded_investigate(*args, **kwargs):
+    """Reserve a public-demo request before invoking the assistant."""
+    reserve_ai_request(st.session_state)
+    return ai.investigate(*args, **kwargs)
+
+
 def run_analysis(key: str, question: str, ids: list[str], signature: tuple) -> None:
     """Replace a snapshot only after success, preserving previous work on failure."""
     try:
         with st.spinner("SERA is retrieving evidence and preparing an assessment…"):
             context = effective_goals()
-            result = ai.investigate(question, context, required_ids=ids)
+            result = guarded_investigate(question, context, required_ids=ids)
         st.session_state.analyses[key] = (result, signature, context, list(ids))
+    except DemoLimitError as error:
+        st.info(str(error))
     except Exception:
         st.error(
             "Analysis could not be completed. Your inputs and any previous assessment are preserved. Retry, or ask the operator to check AI provider or local model configuration."
@@ -392,7 +401,7 @@ def workspace_callbacks() -> WorkspaceCallbacks:
         show_assessment_notice=show_assessment_notice,
         buyer_answer_markdown=buyer_answer_markdown,
         ai_configured=ai.configured,
-        investigate=ai.investigate,
+        investigate=guarded_investigate,
     )
 
 
@@ -431,7 +440,7 @@ def main() -> None:
             "The demo practice catalog could not be loaded. Restore a valid catalog, then reload SERA."
         )
         st.stop()
-    storage = ListStorage()
+    storage = SessionListStorage(st.session_state) if public_demo_enabled() else ListStorage()
     try:
         saved = storage.load()
     except (OSError, ValidationError, ValueError):
@@ -481,6 +490,11 @@ def main() -> None:
         st.caption("Guides assessments; does not change search matches.")
         st.divider()
         st.caption(f"Demo workspace · {len(records)} fictional practices")
+        if public_demo_enabled():
+            st.caption(
+                "Your shortlists stay private to this visit. Export them before closing or reloading. "
+                "AI usage is limited for this public demo."
+            )
         st.caption(
             "AI assessments configured"
             if ai.configured()

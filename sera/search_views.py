@@ -7,6 +7,7 @@ import streamlit as st
 from sera import ai
 from sera.catalog import money
 from sera.models import SPECIALTIES, STATES, STATUSES, Filters, Practice
+from sera.public_demo import DemoLimitError, reserve_ai_request
 
 sort_options = ("Catalog order", "Price low–high", "Price high–low", "Name A–Z")
 
@@ -173,6 +174,7 @@ def search_controls() -> bool:
             ):
                 try:
                     with st.spinner("Preparing your search criteria…"):
+                        reserve_ai_request(st.session_state)
                         suggestion = ai.extract_filters(description)
                     st.session_state.suggestion = suggestion
                     st.session_state.suggestion_pending = True
@@ -182,6 +184,8 @@ def search_controls() -> bool:
                     )
                     st.session_state.search_stage = "review"
                     st.rerun()
+                except DemoLimitError as error:
+                    st.info(str(error))
                 except Exception:
                     st.error(
                         "Filter suggestion failed. Your request and applied filters are preserved. Retry or set filters manually."

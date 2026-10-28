@@ -10,6 +10,7 @@ from sera.exports import build_list_export, export_csv, export_filename, export_
 from sera.ma_workspace import deal_notes, deal_tasks
 from sera.models import Filters, Practice, SavedList, SavedStore
 from sera.practice_views import render_comparison
+from sera.public_demo import DemoLimitError
 from sera.storage import ListStorage
 
 
@@ -567,6 +568,8 @@ def render_assistant(
             st.session_state.last_trace = result
             st.session_state.assistant_clear_composer = True
             st.rerun()
+        except DemoLimitError as error:
+            st.info(str(error))
         except Exception:
             st.error(
                 "The assistant could not finish. Your question and conversation are preserved. Retry with a narrower request or ask the operator to check configuration."

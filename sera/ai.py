@@ -14,6 +14,7 @@ from langchain.tools import tool
 from langchain_core.callbacks import BaseCallbackHandler
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, ToolMessage
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
 
@@ -56,27 +57,35 @@ class Investigation(TypedDict):
 def provider_name() -> str:
     """Choose one operator-configured provider; never fall back to a paid API."""
     provider = os.getenv("SERA_AI_PROVIDER", "openai").strip().lower()
-    if provider not in {"openai", "ollama"}:
-        raise ValueError("SERA_AI_PROVIDER must be openai or ollama.")
+    if provider not in {"openai", "ollama", "gemini"}:
+        raise ValueError("SERA_AI_PROVIDER must be openai or ollama or gemini.")
     return provider
 
 
 def model_name() -> str:
-    return (
-        os.getenv("OLLAMA_MODEL", "qwen3:8b").strip()
-        if provider_name() == "ollama"
-        else os.getenv("OPENAI_MODEL", "gpt-4.1-mini").strip()
-    )
+    provider = provider_name()
+    if provider == "ollama":
+        return os.getenv("OLLAMA_MODEL", "qwen3:8b").strip()
+    if provider == "gemini":
+        return os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite").strip()
+    return os.getenv("OPENAI_MODEL", "gpt-4.1-mini").strip()
 
 
 def configured() -> bool:
     # Invalid operator settings should be surfaced as unavailable, not crash app startup.
-    if os.getenv("SERA_AI_PROVIDER", "openai").strip().lower() not in {"openai", "ollama"}:
+    if os.getenv("SERA_AI_PROVIDER", "openai").strip().lower() not in {
+        "openai",
+        "ollama",
+        "gemini",
+    }:
         return False
     if provider_name() == "ollama":
         return bool(model_name())
-    key = os.getenv("OPENAI_API_KEY", "").strip()
-    return bool(key and not key.startswith("replace_"))
+    key_name = "GEMINI_API_KEY" if provider_name() == "gemini" else "OPENAI_API_KEY"
+    key = os.getenv(key_name, "").strip()
+    return bool(
+        key and not key.startswith("replace_") and (provider_name() != "gemini" or model_name())
+    )
 
 
 def model() -> BaseChatModel:
@@ -102,6 +111,17 @@ def model() -> BaseChatModel:
         )
     if not configured():
         raise ValueError("AI unavailable: operator API configuration required.")
+    if provider_name() == "gemini":
+        return ChatGoogleGenerativeAI(
+            model=model_name(),
+            api_key=os.environ["GEMINI_API_KEY"].strip(),
+            # Use only this explicit key and Developer API, never ambient Google credentials.
+            vertexai=False,
+            timeout=MODEL_TIMEOUT_SECONDS,
+            # This adapter counts total attempts: 0 restores Google's default retries.
+            max_retries=1,
+            max_tokens=900,
+        )
     return ChatOpenAI(
         model=model_name(),
         timeout=MODEL_TIMEOUT_SECONDS,

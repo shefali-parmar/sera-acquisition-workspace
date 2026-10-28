@@ -5,6 +5,7 @@ import os
 import tempfile
 import threading
 import time
+from collections.abc import MutableMapping
 from contextlib import contextmanager
 from pathlib import Path
 from uuid import uuid4
@@ -193,3 +194,51 @@ class ListStorage:
                 if item.id in selected:
                     item.practice_ids.append(practice_id)
             self.write(store)
+
+
+class SessionListStorage(ListStorage):
+    """Saved lists private to a supplied browser session, without filesystem persistence.
+
+    The mapping must belong to the current session (for example, st.session_state),
+    never a shared application cache. Lists last only as long as that session does.
+    Stored JSON bytes prevent a caller's editable snapshot from aliasing saved state.
+    """
+
+    _state_key = "_sera_session_saved_lists"
+    # A common lock protects transactions even when a session constructs a new backend.
+    # Only the lock is global; list content stays entirely in the supplied mapping.
+    _session_lock = threading.RLock()
+
+    def __init__(self, state: MutableMapping, *, valid_practice_ids=None):
+        self._state = state
+        self.valid_practice_ids = (
+            {practice.id for practice in load_practices()}
+            if valid_practice_ids is None
+            else set(valid_practice_ids)
+        )
+
+    @contextmanager
+    def _locked(self):
+        with self._session_lock:
+            yield
+
+    def _content(self) -> bytes | None:
+        content = self._state.get(self._state_key)
+        if content is not None and not isinstance(content, bytes):
+            raise StorageError("Saved lists could not be read. Start a new session and retry.")
+        return content
+
+    def write(self, store: SavedStore) -> None:
+        """Replace only this session's validated, current snapshot as one transaction."""
+        with self._locked():
+            validated = SavedStore.model_validate(store.model_dump())
+            current = self.load()
+            if store._storage_revision != current._storage_revision:
+                raise StorageConflictError("Saved lists changed. Reload and retry.")
+            previous_members = {item.id: set(item.practice_ids) for item in current.lists}
+            for item in validated.lists:
+                added = set(item.practice_ids) - previous_members.get(item.id, set())
+                self._validate_practices(added)
+            payload = validated.model_dump_json(indent=2).encode("utf-8")
+            self._state[self._state_key] = payload
+            store._storage_revision = _revision(payload)

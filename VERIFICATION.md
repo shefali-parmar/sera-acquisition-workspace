@@ -13,6 +13,16 @@ October 27, 2026. This record applies only to this restored full-product working
 
 These checks verify controlled behavior. They are not a model accuracy score, a security audit or a production deployment check.
 
+## Public hosting preparation — October 27, 2026
+
+- Added an explicit Gemini Developer API provider using `langchain-google-genai` 4.4.2. Its default model is `gemini-3.5-flash-lite`; the model and private key remain operator settings. Actual adapter tests mock the network boundary and verify native structured extraction, tool arguments, 45,000 ms timeout, one total attempt and a 900-token output limit. No live Gemini accuracy claim follows from those tests.
+- Added public session storage, selected by `SERA_PUBLIC_DEMO=true`. It preserves list validation, atomic membership operations and stale-edit checks without reading or writing shared saved-list files. Local disk persistence is unchanged.
+- Added public AI limits at all three model entry paths: filter suggestions, practice/list assessments and Ask SERA. Defaults are 10 requests per visit, a 10-second cooldown and 100 requests per process per UTC day. New conversations do not reset the allowance. Failed requests count. These counters reset with their session/process and are not a provider billing ceiling.
+- The isolated Python 3.14 environment passed **230 tests in 10.10 seconds**, dependency consistency, Ruff lint and formatting for all 34 Python files. Offline evaluation: **5 passed, 6 skipped** with no model calls. Fourteen upstream deprecation warnings remain (LangSmith and Google SDK).
+- Four integration regressions exercise public-mode UI isolation, rejection before filter extraction, starter drafts without calls, preservation of rejected chat drafts, and assessment rejection before model invocation. Session-storage regressions additionally cover snapshots, memberships, IDs, stale edits and filesystem avoidance.
+- A real local public-mode server on port 8506 created “Private visit check” with Riverbend Dermatology through the Save control. Its Shortlists screen retained that candidate. A second browser tab opened a separate visit with no lists. The sidebar disclosed per-visit storage and export-before-reload behavior. Screenshot: `local_data/public-isolated-visit.jpg`.
+- Public deployment and live Gemini verification are pending at this checkpoint. The private hosting key is entered directly into Streamlit settings and is excluded from the repository.
+
 ## GitHub preparation — October 27, 2026
 
 - Installed `requirements-dev.txt` from PyPI into a new isolated Python 3.14 environment without system site packages or the existing SERA environment. Installation succeeded; `pip check` found no broken requirements.
