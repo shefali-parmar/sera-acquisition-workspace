@@ -6,7 +6,9 @@ from datetime import date
 from functools import lru_cache
 from pathlib import Path
 
+from sera.geography import distance_miles
 from sera.models import Filters, Practice
+from sera.search_location import validate_distance_filters
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -53,14 +55,19 @@ def search(records: Iterable[Practice], filters: Filters) -> list[Practice]:
         set, (filters.specialties, filters.states, filters.statuses)
     )
     city, keyword = filters.city.strip().casefold(), filters.keyword.strip().casefold()
+    origin = validate_distance_filters(filters)
 
     def matches(practice: Practice) -> bool:
         if specialties and practice.specialty not in specialties:
             return False
-        if states and practice.state not in states:
+        if filters.max_distance_miles is None and states and practice.state not in states:
             return False
-        if city and practice.city.casefold() != city:
+        if filters.max_distance_miles is None and city and practice.city.casefold() != city:
             return False
+        if filters.max_distance_miles is not None:
+            distance = distance_miles(origin, practice.city, practice.state)
+            if distance is None or distance > filters.max_distance_miles:
+                return False
         if practice.status not in statuses:
             return False
         if practice.asking_price is None:

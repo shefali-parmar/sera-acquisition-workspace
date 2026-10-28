@@ -2,6 +2,14 @@
 
 October 27, 2026. This record applies only to this restored full-product working copy. The original archive, latest advisor and v2 are separate applications.
 
+## Relevance and distance — October 27, 2026
+
+- Removed Catalog order. Relevance is the default; eligible ties use Name A–Z then stable ID. Price sorts keep undisclosed prices last. Relevance equally weights active keyword placement, price headroom, surplus above selected minimums and proximity; it never changes eligibility or uses acquisition priorities.
+- Added offline Census ZIP/city/state lookup and approximate straight-line miles to each practice's city center. ZIP takes precedence; otherwise a supplied city or single state supplies the area center. All 50 practice cities resolve. Unknown or ambiguous explicit origins prevent application; unknown practice locations cannot meet a radius. See [data provenance and limitations](docs/GEOGRAPHY.md).
+- A 1–10,000 mile radius replaces only exact city/state restrictions. Other hard filters remain required. Distance sorting becomes available when an origin resolves, missing distances sort last, and cards disclose rounded approximate miles. Apply/discard/reset preserve the existing review flow. Changing criteria, sort or membership resets pagination.
+- The isolated local suite passed **299 tests in 11.35 seconds** before adding one additional fractional-radius boundary regression. Lint, formatting, dependency consistency and offline evaluation passed (5 passed, 6 skipped; no model requests). A separate integration review caught and fixed a model/UI radius-bound mismatch: both now require at least one mile.
+- Real local browser: ZIP 95814 with a 100-mile radius returned three Sacramento practices, each displaying approximately two miles. Distance appeared among the five sort choices; Catalog order was absent. Changing to Distance preserved the three candidates. Hosted verification follows after publication.
+
 ## Controlled checks
 
 - Python 3.14.8, using the existing SERA virtual environment.

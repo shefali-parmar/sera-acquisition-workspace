@@ -10,6 +10,7 @@ from streamlit.testing.v1 import AppTest
 from sera import ai
 from sera.catalog import load_practices, search
 from sera.models import Filters, SearchSuggestion
+from sera.search_views import sorted_practices
 from sera.storage import ListStorage
 
 APP = Path(__file__).parents[1] / "app.py"
@@ -113,7 +114,7 @@ def test_suggestion_approval_and_manual_edits_survive_navigation(app_env, monkey
     assert app.session_state["filters"].states == []
     assert "search_preferences" not in app.session_state
     assert not element(app.checkbox, "Include practices exactly at the price cap").value
-    element(app.text_input, "City · exact match, no radius").set_value("Sacramento").run()
+    element(app.text_input, "City").set_value("Sacramento").run()
     click(app, "Apply filters")
     assert app.session_state["filters"].city == "Sacramento"
     assert not app.multiselect
@@ -126,7 +127,7 @@ def test_suggestion_approval_and_manual_edits_survive_navigation(app_env, monkey
     workspace(app, "Explore practices")
     assert not app.multiselect
     click(app, "Edit filters")
-    assert element(app.text_input, "City · exact match, no radius").value == "Sacramento"
+    assert element(app.text_input, "City").value == "Sacramento"
     assert any(item.value == "California under 1.5m" for item in app.markdown)
     click(app, "Revise request")
     assert element(app.text_area, "Describe your ideal practice").value == "California under 1.5m"
@@ -304,6 +305,8 @@ def test_browse_details_save_then_reopen_membership(app_env):
     storage = ListStorage()
     list_id = storage.create("Demo shortlist")
     app = start()
+    app.session_state["filters"] = Filters(city="Sacramento")
+    app.run()
     app.button(key="details_SERA-001").click().run()
     assert any("Seller legal disclosures" in item.value for item in app.markdown)
     assert [tab.label for tab in app.tabs] == [
@@ -553,7 +556,7 @@ def test_suggested_zero_cap_remains_zero_when_applied(app_env, monkeypatch):
 
 def test_catalog_paginates_distinct_practices_and_filter_change_resets_page(app_env):
     records = load_practices()
-    eligible = search(records, Filters())
+    eligible = sorted_practices(search(records, Filters()))
     app = start()
     first_page = visible_practice_ids(app)
     assert first_page == [practice.id for practice in eligible[:6]]
@@ -577,7 +580,9 @@ def test_catalog_paginates_distinct_practices_and_filter_change_resets_page(app_
     assert not visible_practice_ids(app)
     element(app.multiselect, "States · all 50 available").set_value(["CA"]).run()
     click(app, "Apply filters")
-    filtered = search(records, Filters(states=["CA"]))
+    filtered = sorted_practices(
+        search(records, Filters(states=["CA"])), filters=Filters(states=["CA"])
+    )
     assert visible_practice_ids(app) == [practice.id for practice in filtered[:6]]
     assert app.session_state["result_page"] == 0
     assert not app.exception
@@ -672,6 +677,8 @@ def test_card_and_dialog_save_controls_have_distinct_memberships_keys(app_env):
     storage = ListStorage()
     storage.create("Shared candidate", practice_ids=["SERA-001"])
     app = start()
+    app.session_state["filters"] = Filters(city="Sacramento")
+    app.run()
     app.button(key="details_SERA-001").click().run()
     keys = [item.key for item in app.multiselect if item.label == "Save to lists"]
     assert any(key.startswith("explore_save_SERA-001_") for key in keys)
@@ -682,9 +689,13 @@ def test_card_and_dialog_save_controls_have_distinct_memberships_keys(app_env):
 
 def test_sorting_preserves_membership_and_resets_page(app_env):
     app = start()
+    assert element(app.selectbox, "Sort practices").value == "Relevance"
+    assert "Catalog order" not in element(app.selectbox, "Sort practices").options
+    app.session_state["result_sort"] = "Catalog order"
+    app.run()
+    assert element(app.selectbox, "Sort practices").value == "Relevance"
     click(app, "Next")
     element(app.selectbox, "Sort practices").set_value("Price high–low").run()
-    from sera.search_views import sorted_practices
 
     expected = sorted_practices(search(load_practices(), Filters()), "Price high–low")
     assert visible_practice_ids(app) == [item.id for item in expected[:6]]
@@ -746,4 +757,53 @@ def test_native_ma_scope_selection_drafts_then_one_explicit_request(app_env, mon
     assert element(app.text_area, "Ask SERA").value == ""
     assert calls == [(question, ["SERA-001", "SERA-025"])]
     assert any(item.key == "export_deal_notes" for item in app.get("download_button"))
+    assert not app.exception
+
+
+def test_distance_draft_validation_apply_sort_discard_and_reset(app_env):
+    app = start()
+    assert "Distance" not in element(app.selectbox, "Sort practices").options
+    click(app, "Set filters manually")
+    element(app.text_input, "Distance from · ZIP, city, or state").set_value("95814").run()
+    element(app.checkbox, "Limit distance").check().run()
+    element(app.number_input, "Maximum distance (miles)").set_value(100.0).run()
+    assert app.session_state["filters"] == Filters()
+    click(app, "Apply filters")
+    applied = app.session_state["filters"]
+    assert applied.distance_origin == "95814"
+    assert applied.max_distance_miles == 100
+    assert "Distance" in element(app.selectbox, "Sort practices").options
+    element(app.selectbox, "Sort practices").set_value("Distance").run()
+    expected = sorted_practices(search(load_practices(), applied), "Distance", applied)
+    assert visible_practice_ids(app) == [record.id for record in expected[:6]]
+    assert any("Distances from ZIP 95814" in item.value for item in app.caption)
+    click(app, "Edit filters")
+    element(app.text_input, "Distance from · ZIP, city, or state").set_value("Not a place").run()
+    assert element(app.button, "Apply filters").disabled
+    assert app.session_state["filters"] == applied
+    assert app.error
+    click(app, "Discard unapplied changes")
+    assert app.session_state["filters"] == applied
+    assert element(app.selectbox, "Sort practices").value == "Distance"
+    click(app, "Edit filters")
+    click(app, "Reset all filters")
+    click(app, "Apply filters")
+    assert app.session_state["filters"] == Filters()
+    assert element(app.selectbox, "Sort practices").value == "Relevance"
+    assert "Distance" not in element(app.selectbox, "Sort practices").options
+    assert not app.exception
+
+
+def test_relevance_uses_criteria_preserves_membership_and_ignores_priorities(app_env):
+    app = start()
+    filters = Filters(states=["CA"], max_price=2000000)
+    app.session_state["filters"] = filters
+    app.run()
+    eligible = search(load_practices(), filters)
+    expected = sorted_practices(eligible, "Relevance", filters)
+    assert visible_practice_ids(app) == [record.id for record in expected[:6]]
+    app.session_state["goals"] = "Buy the most expensive practice"
+    app.run()
+    assert visible_practice_ids(app) == [record.id for record in expected[:6]]
+    assert {p.id for p in expected} == {p.id for p in eligible}
     assert not app.exception

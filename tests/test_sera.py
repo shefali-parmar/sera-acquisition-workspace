@@ -218,7 +218,7 @@ def test_ui_filters_details_and_list_editing(monkeypatch, tmp_path):
     assert app.multiselect(key="states0").value == ["AK"]
     app.multiselect(key="states0").set_value([])
     next(b for b in app.button if b.label == "Apply filters").click().run()
-    app.button(key="details_SERA-001").click().run()
+    next(b for b in app.button if b.label == "View practice").click().run()
     assert not app.exception
     assert any("Seller legal disclosures" in x.value for x in app.markdown)
     app = AppTest.from_file(str(ROOT / "app.py"), default_timeout=30).run()

@@ -17,14 +17,16 @@ from sera.catalog import (
     search,
 )
 from sera.design import APP_CSS
+from sera.geography import distance_miles
 from sera.models import Filters, Practice, SavedStore
 from sera.practice_views import missing_information, render_practice_details
 from sera.public_demo import DemoLimitError, public_demo_enabled, reserve_ai_request
+from sera.search_location import optional_origin
 from sera.search_views import (
+    available_sort_options,
     browse_identity,
     criteria_summary,
     search_controls,
-    sort_options,
     sorted_practices,
 )
 from sera.storage import ListStorage, SessionListStorage, StorageError
@@ -252,6 +254,7 @@ def card(
     key_prefix: str = "explore",
     comparison_selected: bool | None = None,
     on_compare_change=None,
+    distance_value: float | None = None,
 ) -> None:
     """A compact evidence summary with independent viewing and saving actions."""
     years = operating_years(practice)
@@ -300,6 +303,8 @@ def card(
             + "</div>",
             unsafe_allow_html=True,
         )
+        if distance_value is not None:
+            st.caption(f"≈ {distance_value:,.0f} mi from search origin")
         view, save = st.columns([3, 2])
         with view:
             if st.button(
@@ -339,16 +344,32 @@ def explore_practices(records: list[Practice], storage: ListStorage, saved: Save
     st.subheader(heading)
     if st.session_state.get("search_stage", "search") != "results":
         st.caption(caption)
+    sort_options = available_sort_options(st.session_state.filters)
+    origin = optional_origin(st.session_state.filters)
     current_sort = st.session_state.get("result_sort", sort_options[0])
+    if current_sort not in sort_options:
+        current_sort = sort_options[0]
     st.session_state.result_sort = current_sort
     st.session_state._result_sort = current_sort
 
     def change_sort():
         st.session_state.result_sort = st.session_state._result_sort
 
-    st.selectbox("Sort practices", sort_options, key="_result_sort", on_change=change_sort)
+    st.selectbox(
+        "Sort practices",
+        sort_options,
+        key="_result_sort",
+        on_change=change_sort,
+        help="Relevance balances keyword match, price headroom, amounts above selected minimums, and proximity when a location is supplied. All hard criteria still apply. Distance is available after adding a ZIP, city and state, or one state in filters.",
+    )
+    if origin:
+        st.caption(
+            f"Distances from {origin.label} · Approximate straight-line miles to practice city centers."
+        )
     results = sorted_practices(
-        search(records, st.session_state.filters), st.session_state.result_sort
+        search(records, st.session_state.filters),
+        st.session_state.result_sort,
+        st.session_state.filters,
     )
     signature = (
         st.session_state.filters.model_dump_json(),
@@ -377,7 +398,15 @@ def explore_practices(records: list[Practice], storage: ListStorage, saved: Save
     with st.container(key="practice_grid"):
         for column, practice in zip(st.columns(len(visible)), visible):
             with column:
-                card(practice, storage, saved, key_prefix="explore")
+                card(
+                    practice,
+                    storage,
+                    saved,
+                    key_prefix="explore",
+                    distance_value=distance_miles(origin, practice.city, practice.state)
+                    if origin
+                    else None,
+                )
     if pages > 1:
         previous, count, following = st.columns([1, 2, 1])
         if previous.button("Previous", disabled=page == 0, width="stretch"):

@@ -6,17 +6,50 @@ import streamlit as st
 
 from sera import ai
 from sera.catalog import money
+from sera.geography import distance_miles
 from sera.models import SPECIALTIES, STATES, STATUSES, Filters, Practice
 from sera.public_demo import DemoLimitError, reserve_ai_request
+from sera.ranking import relevance_key
+from sera.search_location import optional_origin, validate_distance_filters
 
-sort_options = ("Catalog order", "Price low–high", "Price high–low", "Name A–Z")
+sort_options = ("Relevance", "Distance", "Name A–Z", "Price low–high", "Price high–low")
 
 
-def sorted_practices(records: Iterable[Practice], sort: str = "Catalog order") -> list[Practice]:
+def available_sort_options(filters: Filters) -> tuple[str, ...]:
+    return tuple(
+        option for option in sort_options if option != "Distance" or optional_origin(filters)
+    )
+
+
+def sorted_practices(
+    records: Iterable[Practice], sort: str = "Relevance", filters: Filters | None = None
+) -> list[Practice]:
     """Order already-filtered records without changing their membership or contents."""
     records = list(records)
-    if sort == "Catalog order":
-        return records
+    filters = filters or Filters()
+    origin = optional_origin(filters)
+
+    def miles(practice):
+        return distance_miles(origin, practice.city, practice.state) if origin else None
+
+    if sort == "Relevance":
+        return sorted(
+            records,
+            key=lambda practice: relevance_key(
+                practice, filters, distance=miles(practice), has_origin=origin is not None
+            ),
+        )
+    if sort == "Distance":
+        if origin is None:
+            raise ValueError(
+                "Add a ZIP code, city and state, or one state before sorting by distance."
+            )
+
+        def distance_key(practice):
+            distance = miles(practice)
+            return (distance is None, distance or 0, practice.name.casefold(), practice.id)
+
+        return sorted(records, key=distance_key)
     if sort == "Name A–Z":
         return sorted(records, key=lambda practice: (practice.name.casefold(), practice.id))
     if sort not in sort_options:
@@ -36,6 +69,11 @@ def _criteria_items(filters: Filters) -> list[tuple[str, str]]:
     locations = [STATES[state] for state in filters.states]
     if filters.city:
         locations.insert(0, filters.city)
+    if filters.max_distance_miles is not None:
+        origin = optional_origin(filters)
+        locations = [
+            f"Within {filters.max_distance_miles:g} miles of {origin.label if origin else filters.distance_origin}"
+        ]
     price = (
         "No price cap"
         if filters.max_price is None
@@ -62,6 +100,11 @@ def _criteria_items(filters: Filters) -> list[tuple[str, str]]:
     ):
         if value:
             items.append((key, f"{value:,}+ {suffix}"))
+    if filters.distance_origin and filters.max_distance_miles is None:
+        origin = optional_origin(filters)
+        items.append(
+            ("distance", "Distance from " + (origin.label if origin else filters.distance_origin))
+        )
     if filters.keyword:
         items.append(("keyword", "Keyword: " + filters.keyword))
     return items
@@ -176,6 +219,7 @@ def search_controls() -> bool:
                     with st.spinner("Preparing your search criteria…"):
                         reserve_ai_request(st.session_state)
                         suggestion = ai.extract_filters(description)
+                        validate_distance_filters(suggestion.filters)
                     st.session_state.suggestion = suggestion
                     st.session_state.suggestion_pending = True
                     st.session_state.filter_draft = suggestion.filters
@@ -235,9 +279,7 @@ def search_controls() -> bool:
                 format_func=lambda x: STATES[x],
                 key="states" + rev,
             )
-            city = st.text_input(
-                "City · exact match, no radius", value=defaults.city, key="city" + rev
-            )
+            city = st.text_input("City", value=defaults.city, key="city" + rev)
             statuses = st.multiselect(
                 "Availability", STATUSES, default=defaults.statuses, key="status" + rev
             )
@@ -289,9 +331,40 @@ def search_controls() -> bool:
                         step=increment,
                         key=widget + rev,
                     )
-            st.caption(
-                "Missing evidence cannot satisfy a positive minimum. City matching is exact; no radius search."
+            st.caption("Missing evidence cannot satisfy a positive minimum.")
+        with st.expander(
+            "Distance (optional)",
+            expanded=bool(defaults.distance_origin or defaults.max_distance_miles),
+        ):
+            distance_origin = st.text_input(
+                "Distance from · ZIP, city, or state",
+                value=defaults.distance_origin,
+                key="distance_origin" + rev,
+                max_chars=120,
+                placeholder="95814, Sacramento, CA, or California",
+                help="A ZIP takes priority. Otherwise use a city center or state center. Leave blank to use your City and single selected State.",
             )
+            radius_enabled = st.checkbox(
+                "Limit distance",
+                value=defaults.max_distance_miles is not None,
+                key="radius_enabled" + rev,
+            )
+            radius = st.number_input(
+                "Maximum distance (miles)",
+                min_value=1.0,
+                max_value=10000.0,
+                value=float(defaults.max_distance_miles or 50),
+                step=25.0,
+                key="radius" + rev,
+                disabled=not radius_enabled,
+            )
+            st.caption(
+                "Approximate straight-line miles from the ZIP, city, or state center to each practice's city center. Not driving distance."
+            )
+            if radius_enabled:
+                st.info(
+                    "The radius replaces exact City and State restrictions. All other criteria still apply."
+                )
         draft = Filters(
             specialties=specialties,
             states=states,
@@ -301,15 +374,25 @@ def search_controls() -> bool:
             statuses=statuses,
             keyword=keyword,
             include_undisclosed=undisclosed,
+            distance_origin=distance_origin,
+            max_distance_miles=radius if radius_enabled else None,
             **minimums,
         )
+        valid_distance = True
+        try:
+            validate_distance_filters(draft)
+        except ValueError as error:
+            valid_distance = False
+            st.error(str(error))
         st.session_state.filter_draft = draft
         if draft != st.session_state.filters or pending:
             st.caption(
                 "You have unapplied changes. Your current search stays unchanged until you apply them."
             )
         apply, revert, reset = st.columns(3)
-        if apply.button("Apply filters", type="primary", width="stretch"):
+        if apply.button(
+            "Apply filters", type="primary", width="stretch", disabled=not valid_distance
+        ):
             st.session_state.filters = draft
             st.session_state.has_applied_search = True
             st.session_state.result_page = 0

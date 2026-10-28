@@ -14,7 +14,7 @@ Every listing, address, financial figure and source reference is invented. SERA 
 
 ## What you can do
 
-- **Explore:** describe an ideal practice or set filters manually, review criteria before applying them, and sort matching practices by name or price. Exact Python filtering determines matches; acquisition priorities do not change them.
+- **Explore:** describe an ideal practice or set filters manually, review criteria before applying them, and sort matching practices by relevance, distance, name or price. Exact Python filtering determines matches; acquisition priorities do not change them.
 - **Inspect:** view financials, staffing, patient information, premises, disclosures and source details. Practice asking prices remain separate from property prices and occupancy costs.
 - **Shortlist:** save practices to named lists, compare two or three candidates, and export the whole list as JSON or CSV. Local memberships persist across restarts; public-demo memberships remain private to the current visit.
 - **Ask SERA:** review an acquisition, compare leasing versus buying, or assess a property's suitability. Attach up to three practices for a tailored discussion. Starter buttons prepare editable questions; only **Send** starts a request.
@@ -75,6 +75,10 @@ flowchart LR
     Evidence --> Assistant[Optional bounded AI assistant]
     Assistant --> Answer[Answer with readable sources]
 ```
+
+Relevance orders eligible practices using equally weighted active signals: keyword placement, asking-price headroom, surplus above selected minimums (capped at twice each minimum), and proximity when an origin resolves. Without active signals, ties sort by name and ID. This is a transparent sorting aid, not an AI confidence or investment-quality score; acquisition priorities never affect it.
+
+Distance accepts a ZIP code, city and state, or state. ZIPs take precedence; otherwise the selected city or single state supplies the origin. A radius of 1–10,000 miles replaces exact city/state restrictions, preserving all other criteria. Distance sorting appears once an origin resolves; cards show approximate straight-line miles to each practice's city center. No driving routes or actual practice addresses are implied. [Census source and location limitations](docs/GEOGRAPHY.md).
 
 Streamlit provides the Explore, Shortlists and Ask SERA screens. Pydantic validates catalog data and storage. Python owns filtering, record identity, persistence and exports. Natural-language filter suggestions are reviewed before application; the model never generates search code or SQL.
 

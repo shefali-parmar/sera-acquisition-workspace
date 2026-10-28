@@ -37,7 +37,7 @@ def start(monkeypatch):
     return app
 
 
-def test_sorts_preserve_catalog_order_handle_zero_unknowns_and_stable_ties():
+def test_sorts_preserve_membership_handle_zero_unknowns_and_stable_ties():
     records = load_practices()[:5]
     names = ["Same", "same", "Alpha", "Zed", "Aardvark"]
     prices = [10, 10, 0, None, None]
@@ -47,8 +47,8 @@ def test_sorts_preserve_catalog_order_handle_zero_unknowns_and_stable_ties():
     ]
     first, second, zero, unknown_z, unknown_a = records
     catalog = [second, first, unknown_z, zero, unknown_a]
-    assert sort_options == ("Catalog order", "Price low–high", "Price high–low", "Name A–Z")
-    assert sorted_practices(catalog) == catalog
+    assert sort_options == ("Relevance", "Distance", "Name A–Z", "Price low–high", "Price high–low")
+    assert sorted_practices(catalog) == [unknown_a, zero, first, second, unknown_z]
     assert sorted_practices(catalog) is not catalog
     assert sorted_practices(catalog, "Price low–high") == [
         zero,
@@ -203,3 +203,23 @@ def test_suggestion_approval_and_revision_keep_applied_identity_until_apply(monk
     assert app.session_state["filters"].max_price == 0
     assert app.session_state["has_applied_search"] is True
     assert not app.exception
+
+
+def test_distance_sort_missing_locations_and_criteria_summary():
+    from sera.geography import distance_miles, resolve_origin
+    from sera.search_views import available_sort_options
+
+    records = load_practices()[:3]
+    missing = records[0].model_copy(update={"city": "Not a place", "name": "AAA"})
+    filters = Filters(distance_origin="95814", max_distance_miles=100)
+    ordered = sorted_practices([missing, *records], "Distance", filters)
+    assert ordered[-1] == missing
+    origin = resolve_origin("95814")
+    distances = [distance_miles(origin, p.city, p.state) for p in ordered[:-1]]
+    assert distances == sorted(distances)
+    assert "Within 100 miles of ZIP 95814" in criteria_summary(filters)
+    assert "Distance from ZIP 95814" in criteria_summary(Filters(distance_origin="95814"))
+    assert "Distance" in available_sort_options(Filters(states=["CA"]))
+    assert "Distance" not in available_sort_options(Filters())
+    with pytest.raises(ValueError, match="before sorting"):
+        sorted_practices(records, "Distance")

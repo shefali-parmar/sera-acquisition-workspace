@@ -92,6 +92,18 @@ class Filters(StrictModel):
     min_operatories: int = Field(default=0, ge=0)
     keyword: str = ""
     include_undisclosed: bool = False
+    distance_origin: str = Field(
+        default="",
+        max_length=120,
+        description="U.S. ZIP code, city and state, or state area center for approximate distance.",
+    )
+    max_distance_miles: float | None = Field(
+        default=None,
+        ge=1,
+        le=10000,
+        allow_inf_nan=False,
+        description="Optional straight-line radius of 1 to 10,000 miles. Replaces exact city/state matching; other filters still apply.",
+    )
 
     @field_validator("states")
     @classmethod
