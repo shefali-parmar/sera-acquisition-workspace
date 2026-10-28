@@ -74,7 +74,7 @@ def buyer_answer_markdown(answer: str) -> str:
         pid, name = re.escape(practice.id), re.escape(practice.name)
         # Clean older snapshots that printed both a name and its internal identifier.
         answer = re.sub(
-            rf"{name}\s*\(\s*{pid}\s*\)|{pid}\s*\(\s*{name}\s*\)",
+            rf"{name}\s*\(\s*(?:ID\s*:\s*)?(?:{pid}|{name})\s*\)|{pid}\s*\(\s*{name}\s*\)",
             lambda _: practice.name,
             answer,
         )

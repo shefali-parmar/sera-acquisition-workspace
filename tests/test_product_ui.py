@@ -818,12 +818,15 @@ def test_assessment_names_and_readable_owned_sources_preserve_internal_snapshot(
         "| Practice ID | Asking price |\n| --- | --- |\n"
         "| SERA-001 — Riverbend Dermatology | $650,000 [SERA-001-S1] |\n"
         "| Elmbrook Skin Center (SERA-025) | $1,150,000 [SERA-025-S1] |\n"
+        "Riverbend Dermatology (ID: SERA-001) has recorded premises.\n"
         "### AI Interpretation\nSERA-001 is one option. [SERA-001-S99]"
     )
     displayed = buyer_answer_markdown(original)
     assert "### SERA's Interpretation" in displayed
     assert "| Riverbend Dermatology |" in displayed
     assert "| Elmbrook Skin Center |" in displayed
+    assert "Riverbend Dermatology has recorded premises." in displayed
+    assert "(ID:" not in displayed
     assert "[Riverbend Dermatology · Source 1]" in displayed
     assert "[Elmbrook Skin Center · Source 1]" in displayed
     assert "SERA-025" not in displayed
