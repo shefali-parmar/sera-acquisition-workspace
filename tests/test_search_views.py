@@ -223,3 +223,78 @@ def test_distance_sort_missing_locations_and_criteria_summary():
     assert "Distance" not in available_sort_options(Filters())
     with pytest.raises(ValueError, match="before sorting"):
         sorted_practices(records, "Distance")
+
+
+@pytest.mark.parametrize("apply_suggestion_first", [True, False])
+def test_new_manual_request_never_inherits_old_suggestion_metadata(
+    monkeypatch, apply_suggestion_first
+):
+    app = start(monkeypatch)
+    monkeypatch.setattr(ai, "configured", lambda: True)
+    monkeypatch.setattr(
+        ai,
+        "extract_filters",
+        lambda _: SearchSuggestion(
+            filters=Filters(states=["CA"]),
+            preferences=["Owner housing included"],
+            unverifiable=["Home included in practice price"],
+        ),
+    )
+    get(app.text_area, "Describe your ideal practice").set_value("Practice with housing").run()
+    click(app, "Suggest editable filters")
+    if apply_suggestion_first:
+        click(app, "Apply filters")
+        # Editing the same request preserves its metadata.
+        click(app, "Edit filters")
+        get(app.multiselect, "States · all 50 available").set_value(["NY"]).run()
+        click(app, "Apply filters")
+        assert app.session_state["search_preferences"] == ["Owner housing included"]
+        click(app, "Change search")
+    else:
+        click(app, "Revise request")
+    get(app.text_area, "Describe your ideal practice").set_value(
+        "Dental practice in Texas, no property"
+    ).run()
+    click(app, "Set filters manually")
+    assert not any("Owner housing included" in item.value for item in app.markdown)
+    get(app.multiselect, "States · all 50 available").set_value(["TX"]).run()
+    click(app, "Apply filters")
+    assert app.session_state["filters"].states == ["TX"]
+    assert app.session_state["search_preferences"] == []
+    assert app.session_state["search_unverifiable"] == []
+    assert not app.exception
+
+
+@pytest.mark.parametrize("change_filters", [True, False])
+def test_discarded_request_cannot_replace_applied_request_metadata(monkeypatch, change_filters):
+    app = start(monkeypatch)
+    monkeypatch.setattr(ai, "configured", lambda: True)
+    monkeypatch.setattr(
+        ai,
+        "extract_filters",
+        lambda _: SearchSuggestion(
+            filters=Filters(states=["CA"]),
+            preferences=["Transition support"],
+            unverifiable=["Housing"],
+        ),
+    )
+    get(app.text_area, "Describe your ideal practice").set_value("Original request").run()
+    click(app, "Suggest editable filters")
+    click(app, "Apply filters")
+    click(app, "Change search")
+    get(app.text_area, "Describe your ideal practice").set_value("Discarded Texas request").run()
+    click(app, "Set filters manually")
+    if change_filters:
+        get(app.multiselect, "States · all 50 available").set_value(["TX"]).run()
+    assert not get(app.button, "Discard unapplied changes").disabled
+    click(app, "Discard unapplied changes")
+    click(app, "Edit filters")
+    assert get(app.multiselect, "States · all 50 available").value == ["CA"]
+    assert app.session_state["description_draft"] == "Discarded Texas request"
+    assert app.session_state["review_description"] == "Original request"
+    get(app.checkbox, "Include undisclosed prices · budget unverified").check().run()
+    click(app, "Apply filters")
+    assert app.session_state["search_preferences"] == ["Transition support"]
+    assert app.session_state["search_unverifiable"] == ["Housing"]
+    assert app.session_state["applied_search_description"] == "Original request"
+    assert not app.exception

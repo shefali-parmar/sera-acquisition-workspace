@@ -41,7 +41,7 @@ class Location:
 
 
 def _key(value: str) -> str:
-    value = unicodedata.normalize("NFKD", value).casefold()
+    value = unicodedata.normalize("NFKD", value).casefold().replace(",", " ")
     return " ".join(re.sub(r"[^\w\s]", "", value, flags=re.UNICODE).split())
 
 

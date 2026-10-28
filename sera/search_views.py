@@ -221,6 +221,8 @@ def search_controls() -> bool:
                         suggestion = ai.extract_filters(description)
                         validate_distance_filters(suggestion.filters)
                     st.session_state.suggestion = suggestion
+                    st.session_state.suggestion_description = description.strip()
+                    st.session_state.review_description = description.strip()
                     st.session_state.suggestion_pending = True
                     st.session_state.filter_draft = suggestion.filters
                     st.session_state.filter_revision = (
@@ -235,6 +237,7 @@ def search_controls() -> bool:
                         "Filter suggestion failed. Your request and applied filters are preserved. Retry or set filters manually."
                     )
             if manual.button("Set filters manually", width="stretch"):
+                st.session_state.review_description = description.strip()
                 st.session_state.search_stage = "review"
                 st.rerun()
             st.caption("Review every suggestion before applying it, or browse the catalog below.")
@@ -242,14 +245,19 @@ def search_controls() -> bool:
             applied_criteria_controls()
         return False
     st.subheader("Search criteria")
-    if st.session_state.get("description_draft"):
+    description = st.session_state.get(
+        "review_description", st.session_state.get("description_draft", "")
+    ).strip()
+    if description:
         st.caption("YOUR REQUEST")
-        st.write(st.session_state.description_draft)
+        st.write(description)
     if st.button("Revise request"):
         st.session_state.search_stage = "search"
         st.rerun()
     suggestion = st.session_state.get("suggestion")
-    pending = st.session_state.get("suggestion_pending", False)
+    pending = st.session_state.get("suggestion_pending", False) and (
+        st.session_state.get("suggestion_description") == description
+    )
     if pending and suggestion:
         st.info(
             "These suggestions are not applied yet. Review the criteria, then apply them to see matches."
@@ -385,7 +393,12 @@ def search_controls() -> bool:
             valid_distance = False
             st.error(str(error))
         st.session_state.filter_draft = draft
-        if draft != st.session_state.filters or pending:
+        unapplied = (
+            draft != st.session_state.filters
+            or pending
+            or description != st.session_state.get("applied_search_description", "")
+        )
+        if unapplied:
             st.caption(
                 "You have unapplied changes. Your current search stays unchanged until you apply them."
             )
@@ -399,15 +412,22 @@ def search_controls() -> bool:
             if pending and suggestion:
                 st.session_state.search_preferences = suggestion.preferences
                 st.session_state.search_unverifiable = suggestion.unverifiable
+            elif description != st.session_state.get("applied_search_description"):
+                st.session_state.search_preferences = []
+                st.session_state.search_unverifiable = []
+            st.session_state.applied_search_description = description
             st.session_state.suggestion_pending = False
             st.session_state.search_stage = "results"
             st.rerun()
         if revert.button(
             "Discard unapplied changes",
-            disabled=draft == st.session_state.filters and not pending,
+            disabled=not unapplied,
             width="stretch",
         ):
             st.session_state.filter_draft = st.session_state.filters
+            st.session_state.review_description = st.session_state.get(
+                "applied_search_description", ""
+            )
             st.session_state.suggestion_pending = False
             st.session_state.filter_revision = st.session_state.get("filter_revision", 0) + 1
             st.session_state.search_stage = "results"
@@ -418,6 +438,9 @@ def search_controls() -> bool:
             st.session_state.result_page = 0
             st.session_state.filter_draft = Filters()
             st.session_state.suggestion = None
+            st.session_state.pop("suggestion_description", None)
+            st.session_state.pop("applied_search_description", None)
+            st.session_state.review_description = ""
             st.session_state.suggestion_pending = False
             st.session_state.search_preferences = []
             st.session_state.search_unverifiable = []

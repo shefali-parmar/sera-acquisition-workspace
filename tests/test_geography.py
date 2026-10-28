@@ -106,3 +106,10 @@ def test_bundled_national_coverage_and_valid_source_coordinates():
             latitude, longitude = row[-2:]
             assert math.isfinite(latitude) and -90 <= latitude <= 90
             assert math.isfinite(longitude) and -180 <= longitude <= 180
+
+
+@pytest.mark.parametrize(
+    "query", ["Boston,MA", "Sacramento,CA", "New York,NY", "St. Louis,MO", "Sacramento,California"]
+)
+def test_city_state_comma_is_a_separator_without_requiring_a_space(query):
+    assert resolve_origin(query) == resolve_origin(query.replace(",", ", "))

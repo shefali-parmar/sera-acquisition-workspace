@@ -96,7 +96,14 @@ def test_oversized_inputs_reject_instead_of_dropping_last_constraint(monkeypatch
 def test_empty_or_truncated_answer_gets_one_repair_then_preserves_facts(monkeypatch):
     for answer in [
         AIMessage(content=""),
-        AIMessage(content="SERA-001 [SERA-001-S1]", response_metadata={"finish_reason": "length"}),
+        *[
+            AIMessage(content="SERA-001 [SERA-001-S1]", response_metadata={key: reason})
+            for key, reason in [
+                ("finish_reason", "length"),
+                ("finish_reason", "MAX_TOKENS"),
+                ("stop_reason", "max_output_tokens"),
+            ]
+        ],
     ]:
         calls = scripted_agent(monkeypatch, [[detail(), answer]])
         result = ai.investigate("Investigate SERA-001", "")
@@ -749,3 +756,86 @@ def test_explicit_absence_of_verified_revenue_is_not_a_positive_claim(claim):
     assert not ai.answer_issues(
         claim + " [SERA-001-S1]", ["SERA-001"], {"SERA-001"}, [{"id": "SERA-001-S1"}]
     )
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "Find the annual rent for this practice.",
+        "Search for its lease renewal terms.",
+        "Find annual rent and other costs.",
+        "Search the lease documents for these practices.",
+        "Find the dermatology details for this practice.",
+        "Show the selected practices and their prices.",
+        "Find this orthodontist's lease terms.",
+        "List practice details.",
+        "Show these practices' annual revenue.",
+    ],
+)
+def test_fact_lookups_retain_selected_and_historical_candidates(question):
+    history = [AIMessage(content="SERA-001 [SERA-001-S5]")]
+    assert not ai.new_discovery(question)
+    assert ai.investigation_ids(question, [], ["SERA-001"]) == ["SERA-001"]
+    assert ai.investigation_ids(question, history, None) == ["SERA-001"]
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "Find a practice in Texas",
+        "Search for dermatology practices",
+        "Find other practices like this practice",
+        "Find practices in Texas and compare their asking prices.",
+        "Find practices like this practice.",
+        "Find orthodontists in Texas.",
+        "Find dental offices in Texas.",
+        "Find a $1.5 million dental practice in Texas.",
+        "Show listed for sale practices in California.",
+        "Find dermatology in Texas and compare their practices.",
+        "New search",
+    ],
+)
+def test_explicit_catalog_discovery_clears_old_candidates(question):
+    assert ai.new_discovery(question)
+    assert ai.investigation_ids(question, [], ["SERA-001"]) == []
+    assert ai.investigation_ids(question, [AIMessage(content="SERA-001 [SERA-001-S5]")], None) == []
+
+
+def test_discovery_with_later_possessive_enables_catalog_tools(monkeypatch):
+    creations = []
+
+    def create(**kwargs):
+        creations.append(kwargs)
+        return SimpleNamespace(
+            invoke=lambda request, config: {
+                "messages": request["messages"]
+                + [AIMessage(content="Which specialties should I search?")]
+            }
+        )
+
+    monkeypatch.setattr(ai, "model", lambda: None)
+    monkeypatch.setattr(ai, "create_agent", create)
+    result = ai.investigate(
+        "Find practices in Texas and compare their asking prices.",
+        "",
+        [HumanMessage(content="Old question"), AIMessage(content="SERA-001")],
+        ["SERA-001"],
+    )
+    assert {tool.name for tool in creations[0]["tools"]} == {
+        "search_practices",
+        "get_practice_details",
+    }
+    assert result["calls"] == []  # The old selected practice was not prefetched.
+    assert len(result["history"]) == 2
+
+
+def test_rent_lookup_retrieves_selected_practice_evidence(monkeypatch):
+    scripted_agent(
+        monkeypatch, [[AIMessage(content="The recorded lease has rent information [SERA-001-S5].")]]
+    )
+    result = ai.investigate(
+        "Find the annual rent for this practice.", "", required_ids=["SERA-001"]
+    )
+    assert result["status"] == "complete"
+    assert any(source["id"] == "SERA-001-S5" for source in result["sources"])
+    assert any(call["tool"] == "get_practice_details" for call in result["calls"])

@@ -2,6 +2,27 @@
 
 October 27, 2026. This record applies only to this restored full-product working copy. The original archive, latest advisor and v2 are separate applications.
 
+## Engineering review and comparison wording — October 27, 2026
+
+The lead reviewed UI, session, shortlist, comparison and export integration. Two agents independently inspected AI/provider/storage safeguards and search/geography state. This was a bounded code and regression review, not a guarantee of zero defects or a penetration test.
+
+Four reproducible defects were corrected:
+
+- **Truncated Gemini answers:** uppercase `MAX_TOKENS` could be accepted as complete. Finish reasons are normalized before the existing one-repair / recorded-facts fallback policy. Controlled tests cover repeated truncation and retained evidence without paid requests.
+- **Lost practice context:** factual requests such as “Find the annual rent for this practice” were mistaken for new catalog searches. Routing now distinguishes factual lookups from catalog discovery, preserving selected or historical candidates while explicit new catalog requests reset them.
+- **City/state parsing:** `Sacramento,CA` and other valid entries without a space failed resolution. Commas now separate the city and state; ZIP precedence, ambiguous-place errors and city coordinates remain unchanged.
+- **Stale search metadata:** a different manually applied request retained old AI preferences and unsupported requirements. Metadata is bound to its request snapshot. Separate review and unsent-description state preserve the applied request on discard; a request-only change can also be discarded. Same-request filter edits retain their metadata.
+
+Final local validation: **332 tests passed in 12.09 seconds** in the isolated Python 3.14 environment, with 14 upstream deprecation warnings. Ruff lint, formatting (40 Python files), dependency consistency and diff whitespace checks passed. Offline evaluation passed 5 deterministic cases and skipped 6 model-dependent cases; skipped cases are not successes. Regressions cover selected/history context, explicit discovery, truncation repair/fallback, comma-separated origins, new manual requests, same-request edits, stale pending suggestions, discard/reapply and request-only changes.
+
+The existing comparison button now reads **Compare with SERA**, and generated or previously stored answers display **SERA's Interpretation**. Buyer-facing facts use practice names and readable owned-source labels. The stored answer, internal IDs, source ownership and raw references under Source details remain unchanged. Unknown source references are not silently assigned to a practice.
+
+Live hosted verification of the preceding wording release (`ec6c490`, [successful CI](https://github.com/shefali-parmar/sera-acquisition-workspace/actions/runs/40610596058)): selected Riverbend Dermatology and Elmbrook Skin Center, opened the factual comparison, and made one Gemini comparison request. It completed and visibly showed both names, readable references and the requested heading. Screenshot: [hosted comparison](docs/images/sera-comparison.png). The update initially hit a transient imported-module error; a host reboot restored a healthy fresh process before verification. This is not evidence of seamless hot reload.
+
+Local browser verification of the parsing fix: entered `Sacramento,CA`, enabled a 50-mile radius and applied it. Three Sacramento practices appeared with the normalized origin label and approximate zero-mile distances. No model was called. Screenshot retained in ignored `local_data/acceptance/audit-city-input.png`.
+
+The live answer still used “Matched” under broad criteria without acquisition priorities; it supplied a conditional comparison rather than a validated preference ranking. Structural checks and a completed request do not establish semantic accuracy. The existing AI-quality limitations below remain open. Public shortlists are private to a visit and require export before reload; request limits reset with sessions/processes and are not a billing ceiling. These are demo boundaries, not durable accounts or production cost controls.
+
 ## Relevance and distance — October 27, 2026
 
 - Removed Catalog order. Relevance is the default; eligible ties use Name A–Z then stable ID. Price sorts keep undisclosed prices last. Relevance equally weights active keyword placement, price headroom, surplus above selected minimums and proximity; it never changes eligibility or uses acquisition priorities.

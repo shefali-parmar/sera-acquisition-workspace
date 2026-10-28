@@ -301,20 +301,59 @@ def _text_ids(text: str) -> list[str]:
 
 
 def new_discovery(question: str) -> bool:
-    """Recognize new catalog requests without resetting 'show me its price' follow-ups."""
-    if re.search(r"\b(find|discover|search|looking for)\b", question, re.I):
+    """Separate catalog discovery from lookups about the current candidates."""
+    if re.search(r"\b(start over|new search)\b", question, re.I):
         return True
-    return bool(
-        re.search(
-            r"\b(show|list|recommend|switch to|instead|start over|new search)\b", question, re.I
-        )
-        and re.search(
-            r"\b(practices|dentists|dentistry|orthodontics|dermatology|pediatrics|"
-            r"ophthalmology|endodontics|medicine|in [A-Za-z]+|new search)\b",
-            question,
-            re.I,
-        )
+    commands = re.finditer(
+        r"\b(find|discover|search|looking for|show|list|recommend|switch to|instead)\b",
+        question,
+        re.I,
     )
+    targets = (
+        r"\b(practices?|dentists?|orthodontists?|dermatologists?|pediatricians?|"
+        r"ophthalmologists?|endodontists?|physicians?|dental offices?|clinics?)\b"
+    )
+    specialties = (
+        r"\b(dentistry|orthodontics|dermatology|pediatrics|ophthalmology|endodontics|medicine)\b"
+    )
+    facts = (
+        r"\b(details?|documents?|records?|terms?|rent|leases?|renewals?|prices?|"
+        r"costs?|revenue|profit|EBITDA|earnings|financials?|patients?|history|"
+        r"disclosures?|evidence|information)\b"
+    )
+    for command in commands:
+        # Inspect the command's object, not later pronouns in another clause:
+        # 'find practices ... compare their prices' searches; 'find their rent' doesn't.
+        phrase = re.split(r"(?<!\d)\.|\.(?!\d)|[!?;\n]", question[command.end() :], maxsplit=1)[0][
+            :180
+        ]
+        phrase = re.sub(r"^\s*(?:(?:me|us)\s+)?(?:for\s+)?", "", phrase, flags=re.I)
+        target = re.search(
+            r"(?:" + specialties + r"\s+)?" + targets + "|" + specialties, phrase, re.I
+        )
+        if target is None:
+            continue
+        specialty_only = bool(re.fullmatch(specialties, target.group(), re.I))
+        prefix, suffix = phrase[: target.start()], phrase[target.end() :]
+        # A target following 'rent for/of this practice' is the owner of a fact,
+        # not the thing being sought. 'Listed for sale' remains a catalog modifier.
+        prefix = re.sub(r"\bfor sale\b", "", prefix, flags=re.I)
+        if re.search(facts, prefix, re.I) or re.search(
+            r"\b(this|that|these|those|its|their|selected|current|of|about|for|from)\b",
+            prefix,
+            re.I,
+        ):
+            continue
+        if re.match(r"\s*(?:['’]s\b|['’](?=\s)|" + facts + r")", suffix, re.I):
+            continue
+        if specialty_only and not re.match(
+            r"\s*(?:$|[,:]|\b(in|near|within|under|below|up to|with|without|for sale|like|and)\b)",
+            suffix,
+            re.I,
+        ):
+            continue
+        return True
+    return False
 
 
 def _named_candidates(text: str) -> tuple[list[str], list[str]]:
@@ -811,7 +850,8 @@ def investigate(
                 ):
                     issues.append("Run search_practices before describing discovery results")
                 if isinstance(last, AIMessage) and any(
-                    last.response_metadata.get(key) in {"length", "max_tokens", "max_output_tokens"}
+                    str(last.response_metadata.get(key, "")).casefold()
+                    in {"length", "max_tokens", "max_output_tokens"}
                     for key in ("finish_reason", "done_reason", "stop_reason")
                 ):
                     issues.append("The answer was truncated; produce a shorter complete answer")
