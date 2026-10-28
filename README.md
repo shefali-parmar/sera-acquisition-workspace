@@ -2,6 +2,8 @@
 
 [![Checks](https://github.com/shefali-parmar/sera-acquisition-workspace/actions/workflows/checks.yml/badge.svg)](https://github.com/shefali-parmar/sera-acquisition-workspace/actions/workflows/checks.yml)
 
+**[Open the public SERA demo](https://sera-acquisition-workspace.streamlit.app/)**
+
 A workspace for exploring medical and dental practice acquisitions, building shortlists, and working through commercial property decisions.
 
 **Portfolio demo · 50 fictional practices · Local and public-demo modes**
