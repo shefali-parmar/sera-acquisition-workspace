@@ -1,6 +1,16 @@
 # Verification record
 
-## Recommendation reliability — October 27, 2026
+## Recommendation completion fixes — October 27, 2026
+
+Follow-up review reproduced checker false positives for quoted legal denials, bold answer labels such as “Legally cleared: No,” and property-inclusion questions followed by “No.” Formatting and local negation are now handled without accepting affirmative unsupported assurances. Corrected conflicting property-prompt instructions: business asking price uses its seller source; property price uses premises evidence; a combined subtotal uses both. Corrective answers stay under 160 words; one repair, 900 model tokens and the 60-second deadline remain unchanged. Private operator logs contain fixed failure-category labels only, with no questions, drafts, provider error text, keys or evidence contents.
+
+All three previously incomplete prompts completed after `154aa8c` and a fresh host reboot: correct combined subtotal and $42,000 over-budget amount; correct legal/consent disclosures including the settled Torrey Pines dispute; and a completed lower-asking-price comparison with unchanged budget eligibility. Review caught loose total-cost/capital language in the latter answer, so `ce3bdf6` also adds a narrow guard and instruction distinguishing asking price from unverified full costs/cash needs.
+
+After `0250acd` and a fresh host reboot, the exact full comparison prompt completed: both asking-price checks stayed matched, Riverbend was favored for its lower asking price, property remained separate and EBITDA was distinguished from net profit. A currency-comparison notation glitch found in that answer is corrected by the presentation-only `5ddc8b2` change, without changing stored answers or making model calls.
+
+Final local validation: **505 tests passed in 12.21 seconds**; 29 regressions were added in this follow-up. Ruff lint/formatting (45 files), dependency consistency and offline evaluation passed (5 passed, 6 live-only skipped). Fourteen upstream deprecation warnings remain. The [display release](https://github.com/shefali-parmar/sera-acquisition-workspace/actions/runs/40620116293) and [final recommendation-checker GitHub workflow](https://github.com/shefali-parmar/sera-acquisition-workspace/actions/runs/40619601352) passed. See the [updated detailed review](docs/RECOMMENDATION_REVIEW.md), [corrected property answer](docs/images/recommendation-property-fixed.png), and [settled-dispute excerpt](docs/images/recommendation-legal-fixed.png). These are bounded observed cases, not a guarantee that every AI answer will complete or be semantically correct.
+
+## Earlier recommendation reliability review — October 27, 2026
 
 Reviewed the actual investigation path and ran controlled adversarial probes. Previously, four incorrect scripted answers could return `complete` despite valid citations: false budget fit, swapped EBITDA, exchanged row citations and guaranteed-profit language. These were validator failures, not four observed Gemini failures. Added record-derived criteria checks and narrow factual/source/assurance checks, preserving one repair and the existing facts-only fallback. Fixed definite selected-practice routing and comparison/property-footnote routing. See [case coverage and remaining limits](docs/RECOMMENDATION_REVIEW.md).
 
@@ -8,7 +18,7 @@ The isolated Python 3.14 environment passed **476 tests in 12.15 seconds**, incl
 
 The published release `7fc9ef1` passed [GitHub Linux checks](https://github.com/shefali-parmar/sera-acquisition-workspace/actions/runs/40616701766). Actual public Gemini tests verified strict versus inclusive cap changes, three-candidate failed/matched/unverified distinctions, and changing priorities from higher EBITDA to lower entry price without changing hard eligibility. The three-candidate working-notes export was downloaded and reopened successfully. [Hosted comparison](docs/images/recommendation-three-practices.png).
 
-Completion limits remain: broader cost/priority and legal/consent prompts sometimes returned facts only. A combined business/property/legal request still fell back after the final fix and fresh host reboot; both asking prices remained available, but the requested explanation was not completed. The locally proven combined-subtotal validation bug is fixed; the exact cause of the discarded live draft is unconfirmed. [Incomplete-answer evidence](docs/images/recommendation-incomplete.png). These observations prevent claiming full AI reliability. See the detailed case-by-case review above for scope and limitations.
+At that earlier release, broader cost/priority and legal/consent prompts sometimes returned facts only. A combined business/property/legal request still fell back after that release and fresh host reboot; both asking prices remained available, but the requested explanation was not completed. The locally proven combined-subtotal validation bug is fixed; the exact cause of the discarded live draft is unconfirmed. [Incomplete-answer evidence](docs/images/recommendation-incomplete.png). These observations prevent claiming full AI reliability. See the detailed case-by-case review above for scope and limitations.
 
 October 27, 2026. This record applies only to this restored full-product working copy. The original archive, latest advisor and v2 are separate applications.
 
