@@ -408,15 +408,25 @@ def investigation_ids(
 
 def _general_property_request(question: str) -> bool:
     """Separate premises guidance from searches of the practice-only catalog."""
+    # A cost-separation reminder does not change the task's subject. Preserve
+    # genuine premises questions elsewhere in the request.
+    subject = re.sub(
+        r"\bKeep\b[^.!?\n]*\b(?:property|real[- ]estate)\b[^.!?\n]*\bseparate\b[^.!?\n]*",
+        "",
+        question,
+        flags=re.I,
+    )
     property_pattern = (
         r"\b(real[- ]estate|propert(?:y|ies)|premises|leases?|leasing|landlords?|"
         r"tenants?|rent(?:al)?|CAM|occupancy|zoning|buildings?|office space|medical space)\b"
     )
-    property_topic = bool(re.search(property_pattern, question, re.I))
+    property_topic = bool(re.search(property_pattern, subject, re.I))
     opening = re.split(r"[.!?\n]", question, maxsplit=1)[0]
     acquisition_task = re.search(
         r"\b(acquisition review|acquisition targets?|due diligence(?: plan)?|"
-        r"seller questions|investment brief|target review|compare|recommend|choose)\b",
+        r"seller questions|investment brief|target review|compare|recommend|choose|"
+        r"asking[- ]price|practice (?:price|budget)|patient (?:minimum|requirement)|"
+        r"which practice)\b",
         opening,
         re.I,
     )

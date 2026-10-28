@@ -140,3 +140,29 @@ def test_conflicting_numeric_requirements_clarify_without_calling_model(monkeypa
     assert "Confirm" in result["answer"]
     assert result["sources"]
     assert result["calls"][0]["executor"] == "application"
+
+
+def test_budget_followup_with_property_footer_keeps_application_criteria_checks(monkeypatch):
+    scripted(
+        monkeypatch,
+        [
+            "SERA-025 meets the asking-price cap and patient requirement [SERA-025-S1]. "
+            "SERA-001 fails the patient requirement [SERA-001-S1]. Net profit unknown."
+        ],
+    )
+    result = ai.investigate(
+        "Change only the practice asking-price cap to up to $1,150,000, inclusive. "
+        "Keep the minimum of 1,000 active patients. Which practice meets both now, and why? "
+        "Keep net profit and property costs separate.",
+        "",
+        required_ids=["SERA-001", "SERA-025"],
+    )
+    assert result["status"] == "complete"
+    assert "Recorded criteria check" in result["answer"]
+    assert "850" in result["answer"]
+    assert not ai._general_property_request(
+        "Which practice meets both now? Keep net profit and property costs separate."
+    )
+    assert ai._general_property_request(
+        "My budget is $1 million. Should I lease or buy a property?"
+    )
