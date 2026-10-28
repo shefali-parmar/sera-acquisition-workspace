@@ -8,7 +8,7 @@ A workspace for exploring medical and dental practice acquisitions, building sho
 
 **Portfolio demo · 50 fictional practices · Local and public-demo modes**
 
-Every listing, address, financial figure and source reference is invented. SERA does not search live listings, establish valuations or complete due diligence. Its optional AI assistant can make unsupported interpretations even when citations are valid; verify its answers against the displayed records.
+Every practice listing, address, financial figure and seller-source reference is invented. SERA does not search live listings, establish valuations or complete due diligence. Its optional AI assistant can make unsupported interpretations even when citations are valid; verify its answers against the displayed records.
 
 ![Explore results showing two fictional California dermatology practices](docs/images/explore.jpg)
 
@@ -23,7 +23,7 @@ The catalog includes 40 leased and 10 owned-premises scenarios. One practice pri
 
 ## Run locally
 
-Use **Python 3.14**. The preceding 183-test release passed in isolated macOS and Ubuntu 24.04 environments. The hosting update adds Gemini, session storage and request-limit regressions; see [verification results](VERIFICATION.md) for current checks. Windows installation has not been independently verified.
+Use **Python 3.14**. The current release passed 300 tests on Ubuntu 24.04; local checks also passed in an isolated macOS environment. See [verification results](VERIFICATION.md) for exact checks. Windows installation has not been independently verified.
 
 ```sh
 python3.14 -m venv .venv
