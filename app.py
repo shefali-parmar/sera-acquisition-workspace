@@ -68,14 +68,35 @@ def run_analysis(key: str, question: str, ids: list[str], signature: tuple) -> N
 
 
 def buyer_answer_markdown(answer: str) -> str:
-    """Keep dollar-denominated amounts literal in Streamlit's Markdown renderer."""
+    """Present named practices and readable references while retaining raw evidence internally."""
+    answer = re.sub(r"\bAI interpretation\b", "SERA's Interpretation", answer, flags=re.I)
     for practice in load_practices():
-        # Preserve source references; record IDs are an internal retrieval detail.
+        pid, name = re.escape(practice.id), re.escape(practice.name)
+        # Clean older snapshots that printed both a name and its internal identifier.
         answer = re.sub(
-            rf"\b{re.escape(practice.id)}\b(?!-S\d+)(?:\s*[—–]\s*{re.escape(practice.name)})?",
-            practice.name,
+            rf"{name}\s*\(\s*{pid}\s*\)|{pid}\s*\(\s*{name}\s*\)",
+            lambda _: practice.name,
             answer,
         )
+        answer = re.sub(
+            rf"{name}\s*[·—–:]\s*{pid}\b(?!-S\d+)",
+            lambda _: practice.name,
+            answer,
+        )
+        answer = re.sub(
+            rf"\b{pid}\b(?!-S\d+)(?:\s*[—–:]\s*{name})?",
+            lambda _: practice.name,
+            answer,
+        )
+        # Only actual owned references receive a friendly label. Validation and
+        # conversation history continue to use the unmodified source IDs.
+        for source in practice.sources:
+            number = source.id.rsplit("-S", 1)[-1]
+            answer = re.sub(
+                rf"\b{re.escape(source.id)}\b",
+                lambda _, name=practice.name, number=number: f"{name} · Source {number}",
+                answer,
+            )
     answer = answer.replace("Practice IDs", "Practices").replace("Practice ID", "Practice")
     return re.sub(r"(?<!\\)\$(?=\d)", r"\\$", answer)
 
@@ -141,6 +162,7 @@ def show_sources(result: ai.Investigation) -> None:
             if reference in seen:
                 continue
             seen.add(reference)
+            st.write(buyer_answer_markdown(reference))
             st.write(source.get("label", "Evidence source"))
             st.caption(
                 f"{source.get('kind', 'Source type unknown')} · "

@@ -261,7 +261,7 @@ def test_assessment_followup_keeps_snapshot_goals_and_selected_ids(app_env, monk
     ).run()
     workspace(app, "Saved lists")
     select_comparison(app, ["SERA-001", "SERA-002"])
-    click(app, "Generate AI comparison")
+    click(app, "Compare with SERA")
     snapshot = calls[-1][1]
     element(app.text_area, "Acquisition priorities (optional)").set_value(
         "Changed buyer goals"
@@ -491,10 +491,8 @@ def test_currency_is_literal_and_private_correction_warnings_stay_hidden(app_env
     app = start()
     workspace(app, "Saved lists")
     select_comparison(app, ["SERA-001", "SERA-002"])
-    click(app, "Generate AI comparison")
-    expected = (
-        r"Recorded asking price is \$650,000 and reported revenue is \$850,000 [SERA-001-S1]."
-    )
+    click(app, "Compare with SERA")
+    expected = r"Recorded asking price is \$650,000 and reported revenue is \$850,000 [Riverbend Dermatology · Source 1]."
     assert any(item.value == expected for item in app.markdown)
     assert result["answer"] == answer
     assert len(app.warning) == 1
@@ -514,7 +512,10 @@ def test_existing_currency_escapes_are_not_duplicated():
     from app import buyer_answer_markdown
 
     text = r"Price \$650,000; revenue $850,000 [SERA-001-S1]."
-    assert buyer_answer_markdown(text) == r"Price \$650,000; revenue \$850,000 [SERA-001-S1]."
+    assert (
+        buyer_answer_markdown(text)
+        == r"Price \$650,000; revenue \$850,000 [Riverbend Dermatology · Source 1]."
+    )
 
 
 def test_zero_price_cap_is_distinct_from_no_cap_and_reset(app_env):
@@ -636,7 +637,7 @@ def test_answers_show_practice_names_but_keep_internal_history_and_source_ids(ap
     element(app.text_area, "Ask SERA").set_value(f"Review {practice.id}")
     click(app, "Send")
     assert any(
-        item.value == f"{practice.name} has recorded evidence [{reference}]."
+        item.value == f"{practice.name} has recorded evidence [{practice.name} · Source 1]."
         for item in app.markdown
     )
     assert any(item.value == f"Review {practice.name}" for item in app.markdown)
@@ -807,3 +808,25 @@ def test_relevance_uses_criteria_preserves_membership_and_ignores_priorities(app
     assert visible_practice_ids(app) == [record.id for record in expected[:6]]
     assert {p.id for p in expected} == {p.id for p in eligible}
     assert not app.exception
+
+
+def test_assessment_names_and_readable_owned_sources_preserve_internal_snapshot():
+    from app import buyer_answer_markdown
+
+    original = (
+        "### Recorded facts\n"
+        "| Practice ID | Asking price |\n| --- | --- |\n"
+        "| SERA-001 — Riverbend Dermatology | $650,000 [SERA-001-S1] |\n"
+        "| Elmbrook Skin Center (SERA-025) | $1,150,000 [SERA-025-S1] |\n"
+        "### AI Interpretation\nSERA-001 is one option. [SERA-001-S99]"
+    )
+    displayed = buyer_answer_markdown(original)
+    assert "### SERA's Interpretation" in displayed
+    assert "| Riverbend Dermatology |" in displayed
+    assert "| Elmbrook Skin Center |" in displayed
+    assert "[Riverbend Dermatology · Source 1]" in displayed
+    assert "[Elmbrook Skin Center · Source 1]" in displayed
+    assert "SERA-025" not in displayed
+    # Unknown evidence is never relabeled as a valid source.
+    assert "[SERA-001-S99]" in displayed
+    assert "### AI Interpretation" in original and "[SERA-001-S1]" in original

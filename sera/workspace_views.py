@@ -316,7 +316,7 @@ def render_shortlists(
             st.session_state.filters.max_price,
         )
         if st.button(
-            "Generate AI comparison",
+            "Compare with SERA",
             disabled=not callbacks.ai_configured(),
             key=f"ai_comparison_{item.id}",
         ):

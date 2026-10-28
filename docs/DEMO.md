@@ -29,7 +29,8 @@ Start Ollama with the configured model before trying this section. Response time
 2. Open **Ask SERA**. Hover or keyboard-focus a starter to read its definition. **Evaluate a practice** concerns the business; **Lease or buy?** concerns occupancy strategy; **Assess a property** concerns the physical premises.
 3. Choose **Lease or buy?**. It prepares a short editable draft without submitting. Review it, add your own assumptions if desired, then choose **Send**. With no practice attached, use this as a general process discussion rather than a claim about a specific listing or current market rate.
 4. Choose **Start a new conversation**, then **Add practices**, select Riverbend Dermatology, and apply the selection. Targets are fixed after the first exchange. Ask: “What are Riverbend's annual base rent and CAM, and what landlord consent should I confirm?” Check the response against the **Property & lease** tab and source details. The recorded values are $43,200 and $9,600; landlord consent requires verification.
-5. Follow up with a question, then use **Export working notes** to retain the visible conversation and its captured scope. **Start a new conversation** starts a fresh exchange.
+5. In **Shortlists**, select two or three saved practices, choose **Compare selected**, then **Compare with SERA** for an evidence-based assessment. Recorded facts use practice names and readable source labels; the interpretation section is titled **SERA's Interpretation**. Full reference IDs remain under Source details.
+6. Follow up with a question, then use **Export working notes** to retain the visible conversation and its captured scope. **Start a new conversation** starts a fresh exchange.
 
 ![Ask SERA starter questions, optional practice attachment and a property-definition pop-up](images/ask-sera.jpg)
 

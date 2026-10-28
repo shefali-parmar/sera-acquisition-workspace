@@ -119,7 +119,7 @@ def test_shortlists_start_unselected_and_require_explicit_comparison(harness):
     assert not any("sera-comparison" in item.value for item in app.markdown)
     _click(app, "Compare selected")
     assert any("sera-comparison" in item.value for item in app.markdown)
-    _click(app, "Generate AI comparison")
+    _click(app, "Compare with SERA")
     assert app.session_state["test_analysis"][2] == ["SERA-001", "SERA-002"]
     _select(app, "SERA-003")
     _select(app, "SERA-004")
