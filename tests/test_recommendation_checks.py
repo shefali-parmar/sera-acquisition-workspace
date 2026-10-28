@@ -242,3 +242,28 @@ def test_denied_assurances_survive_quotes_and_markdown(records, answer):
 )
 def test_formatted_positive_assurances_remain_rejected(records, answer):
     assert record_claim_issues(answer, records)
+
+
+@pytest.mark.parametrize(
+    "answer",
+    [
+        "Prioritize Riverbend Dermatology if absolute lowest business acquisition cost is paramount [SERA-001-S1].",
+        "Riverbend Dermatology requires lower initial capital outlay [SERA-001-S1].",
+        "Riverbend Dermatology has the lowest total acquisition cost [SERA-001-S1].",
+        "Riverbend Dermatology needs less upfront capital required [SERA-001-S1].",
+    ],
+)
+def test_asking_price_does_not_establish_full_cost_or_cash_required(records, answer):
+    assert any("upfront capital" in issue for issue in record_claim_issues(answer, records))
+
+
+@pytest.mark.parametrize(
+    "answer",
+    [
+        "Prioritize Riverbend Dermatology for its lower business asking price [SERA-001-S1].",
+        "Riverbend Dermatology is not known to have lower total acquisition cost [SERA-001-S1].",
+        "Does Riverbend Dermatology require lower initial capital outlay?",
+    ],
+)
+def test_correct_asking_price_priority_and_unknown_full_cost_are_preserved(records, answer):
+    assert not record_claim_issues(answer, records)

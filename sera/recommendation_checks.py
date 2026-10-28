@@ -370,6 +370,20 @@ def record_claim_issues(answer: str, records: dict[str, dict]) -> list[str]:
             explicit = _owners(unit, records)
             citations = {match.upper() for match in _CITATION.findall(unit)}
             cited_owners = {source.split("-S", 1)[0] for source in citations}
+            # A lower asking price alone does not establish financed cash needs
+            # or the full transaction cost. Keep candidate-specific recommendations
+            # on the metric that is actually recorded.
+            for match in re.finditer(
+                r"\b(?:lower|lowest|less|least)\s+(?:initial\s+|upfront\s+)?"
+                r"(?:business acquisition cost|total acquisition costs?|capital outlay|capital required)\b",
+                unit,
+                re.I,
+            ):
+                if explicit and not _guidance(unit) and not _negated(unit, match.start()):
+                    issues.append(
+                        "Compare recorded asking prices only; total acquisition cost and upfront capital "
+                        "are not established by a lower asking price."
+                    )
             owners = explicit or cited_owners
             record = records.get(next(iter(owners))) if len(owners) == 1 else None
             issues.extend(_assurance_issues(unit, record))
