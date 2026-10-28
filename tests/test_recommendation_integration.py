@@ -1,0 +1,142 @@
+"""Recommendation reliability at the investigation boundary; no provider calls."""
+
+from types import SimpleNamespace
+
+import pytest
+from langchain_core.messages import AIMessage
+
+from sera import ai
+from sera.models import Filters
+
+
+def scripted(monkeypatch, answers):
+    requests = []
+
+    def invoke(payload, config):
+        requests.append(payload)
+        answer = answers[min(len(requests) - 1, len(answers) - 1)]
+        return {"messages": payload["messages"] + [AIMessage(content=answer)]}
+
+    monkeypatch.setattr(ai, "model", lambda: None)
+    monkeypatch.setattr(ai, "create_agent", lambda **kwargs: SimpleNamespace(invoke=invoke))
+    return requests
+
+
+@pytest.mark.parametrize(
+    ("question", "goals", "answer"),
+    [
+        (
+            "Recommend SERA-001 only if it is under $600,000.",
+            "Applied filters: " + Filters(max_price=600000).model_dump_json(),
+            "I recommend SERA-001 as a strong fit: its $650,000 asking price is under "
+            "your $600,000 budget [SERA-001-S1]. Net profit remains unknown.",
+        ),
+        (
+            "Compare SERA-001 and SERA-025 and recommend the higher normalized EBITDA target.",
+            "",
+            "I recommend SERA-001 for its higher normalized EBITDA of $386,000 [SERA-001-S4], "
+            "compared with SERA-025 at $187,000 [SERA-025-S4]. Net profit remains unknown.",
+        ),
+        (
+            "Compare SERA-001 and SERA-025.",
+            "",
+            "| Practice | Asking price |\n|---|---|\n"
+            "| Riverbend Dermatology | $1,150,000 [SERA-025-S1] |\n"
+            "| Elmbrook Skin Center | $650,000 [SERA-001-S1] |\n"
+            "Net profit remains unknown. I conditionally recommend Riverbend Dermatology.",
+        ),
+        (
+            "Recommend SERA-001.",
+            "",
+            "SERA-001 is a guaranteed profitable acquisition. Buy it now [SERA-001-S1].",
+        ),
+        (
+            "Evaluate SERA-025's property price.",
+            "",
+            "SERA-025 includes the office condominium in its $1,150,000 practice price "
+            "[SERA-025-S5].",
+        ),
+    ],
+)
+def test_repeated_unreliable_recommendation_withholds_interpretation(
+    monkeypatch, question, goals, answer
+):
+    requests = scripted(monkeypatch, [answer])
+    result = ai.investigate(question, goals)
+    assert len(requests) == 2  # one repair, never an unbounded retry
+    assert result["status"] == "facts_only"
+    assert result["failure_kind"] == "evidence_checks"
+    assert result["warnings"]
+    assert "No recommendation or ranking is available" in result["answer"]
+    assert answer not in result["answer"]
+    assert answer not in result["history"][-1].content
+    assert result["sources"]
+
+
+def test_wrong_financial_amount_can_repair_to_recorded_value(monkeypatch):
+    requests = scripted(
+        monkeypatch,
+        [
+            "SERA-001 normalized EBITDA is $386,000 [SERA-001-S4]. Net profit unknown.",
+            "SERA-001 seller-reported normalized EBITDA is $187,000 [SERA-001-S4]. "
+            "It is not net profit, which remains unknown.",
+        ],
+    )
+    result = ai.investigate("Review SERA-001's financials", "")
+    assert len(requests) == 2
+    assert result["status"] == "complete"
+    assert "$187,000" in result["answer"] and "$386,000" not in result["answer"]
+
+
+def test_definite_practice_keeps_attachment_but_new_search_does_not():
+    assert ai.investigation_ids("Recommend the practice.", [], ["SERA-001"]) == ["SERA-001"]
+    assert ai.investigation_ids("Recommend a practice.", [], ["SERA-001"]) == []
+    assert ai.investigation_ids("Recommend the practice in Texas.", [], ["SERA-001"]) == []
+
+
+def test_property_footnote_does_not_replace_practice_comparison_prompt(monkeypatch):
+    prompts = []
+    scripted(monkeypatch, ["SERA-001 [SERA-001-S1]; SERA-025 [SERA-025-S1]. Net profit unknown."])
+    original = ai.create_agent
+
+    def create(**kwargs):
+        prompts.append(kwargs["system_prompt"])
+        return original(**kwargs)
+
+    monkeypatch.setattr(ai, "create_agent", create)
+    result = ai.investigate("Compare SERA-001 and SERA-025. Keep property prices separate.", "")
+    assert result["status"] == "complete"
+    assert prompts == [ai.SYNTHESIS_SYSTEM]
+    assert ai._general_property_request("Compare the annual rent for SERA-001 and SERA-025.")
+
+
+def test_current_budget_check_is_visible_and_survives_in_conversation(monkeypatch):
+    requests = scripted(
+        monkeypatch,
+        [
+            "SERA-001 fails the patient minimum [SERA-001-S1]. "
+            "SERA-025 fails the asking-price cap [SERA-025-S1]. "
+            "Neither qualifies. Net profit remains unknown."
+        ],
+    )
+    goals = "Applied filters: " + Filters(max_price=1500000, min_patients=1000).model_dump_json()
+    result = ai.investigate(
+        "Compare SERA-001 and SERA-025. My practice asking-price budget is now $1 million.",
+        goals,
+    )
+    assert len(requests) == 1
+    assert result["status"] == "complete"
+    assert "Recorded criteria check" in result["answer"]
+    assert "1,000,000" in result["answer"]
+    assert "Failed" in result["answer"] and "850" in result["answer"]
+    assert result["history"][-1].content == result["answer"]
+    assert "Application-calculated criteria checks" in requests[0]["messages"][-1].content
+
+
+def test_conflicting_numeric_requirements_clarify_without_calling_model(monkeypatch):
+    monkeypatch.setattr(ai, "model", lambda: pytest.fail("Conflicting bounds need a buyer choice"))
+    result = ai.investigate("Recommend SERA-001 under $500k and under $700k.", "")
+    assert result["status"] == "needs_clarification"
+    assert "Confirm" in result["answer"]
+    assert result["sources"]
+    assert result["calls"][0]["executor"] == "application"

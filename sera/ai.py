@@ -20,6 +20,8 @@ from langchain_openai import ChatOpenAI
 
 from sera.catalog import ROOT, load_practices, search
 from sera.models import SPECIALTIES, STATES, Filters, SearchSuggestion
+from sera.recommendation_checks import record_claim_issues
+from sera.recommendation_fit import build_fit_context, fit_claim_issues, format_fit_context
 
 # Only the operator's private project settings are loaded; environment values take precedence.
 load_dotenv(ROOT / ".env")
@@ -335,6 +337,14 @@ def new_discovery(question: str) -> bool:
             continue
         specialty_only = bool(re.fullmatch(specialties, target.group(), re.I))
         prefix, suffix = phrase[: target.start()], phrase[target.end() :]
+        # A definite singular with no new search qualifiers refers to the attached
+        # practice. An indefinite 'a practice' or 'the practice in Texas' is discovery.
+        if (
+            target.group().casefold() == "practice"
+            and re.fullmatch(r"\s*the\s+", prefix, re.I)
+            and not suffix.strip(" .,!?")
+        ):
+            continue
         # A target following 'rent for/of this practice' is the owner of a fact,
         # not the thing being sought. 'Listed for sale' remains a catalog modifier.
         prefix = re.sub(r"\bfor sale\b", "", prefix, flags=re.I)
@@ -406,7 +416,7 @@ def _general_property_request(question: str) -> bool:
     opening = re.split(r"[.!?\n]", question, maxsplit=1)[0]
     acquisition_task = re.search(
         r"\b(acquisition review|acquisition targets?|due diligence(?: plan)?|"
-        r"seller questions|investment brief|target review)\b",
+        r"seller questions|investment brief|target review|compare|recommend|choose)\b",
         opening,
         re.I,
     )
@@ -497,6 +507,7 @@ def answer_issues(
     sources: list[dict],
     *,
     require_profit_distinction: bool = True,
+    records: dict[str, dict] | None = None,
 ) -> list[str]:
     """Check evidence access and references, plus explicit common unsupported claims.
 
@@ -571,7 +582,9 @@ def answer_issues(
                 "Crime has no comparable benchmark; remove high/low or safety classifications"
             )
             break
-    return issues
+    if records:
+        issues.extend(record_claim_issues(answer, records))
+    return list(dict.fromkeys(issues))
 
 
 class _EvidenceCapture(BaseCallbackHandler):
@@ -773,6 +786,8 @@ def investigate(
         property_request = _general_property_request(question)
         focused_property = direct and property_request
         general_property = not direct and property_request
+        prior_questions = [m.content for m in prior if isinstance(m, HumanMessage)]
+        fit_context = build_fit_context({}, goals, question, prior_questions)
         if direct:
             for pid in required_ids:
                 arguments = {"practice_id": pid}
@@ -788,9 +803,28 @@ def investigate(
                 content="Current-turn retrieved evidence:\n"
                 + json.dumps(list(capture.records.values()))
             )
+            if not focused_property:
+                fit_context = build_fit_context(capture.records, goals, question, prior_questions)
+                evidence.content += (
+                    "\nApplication-calculated criteria checks (not an overall endorsement):\n"
+                    + json.dumps(fit_context)
+                    + "\nRespect these checks. Never recommend a candidate as meeting a failed or "
+                    "unverified hard requirement. Preferences do not change these checks."
+                )
             messages = prior + [request, evidence]
         else:
             messages = prior + [request]
+        if not property_request and fit_context.get("clarification"):
+            answer = fit_context["clarification"]
+            return {
+                "answer": answer,
+                "calls": prefetched_calls,
+                "sources": [s for r in capture.records.values() for s in r["sources"]],
+                "history": _prior_messages(prior + [request, AIMessage(content=answer)]),
+                "status": "needs_clarification",
+                "warnings": [],
+                "failure_kind": None,
+            }
         agent = create_agent(
             model=model(),
             tools=[] if direct or general_property else [search_practices, get_practice_details],
@@ -836,7 +870,13 @@ def investigate(
                     set(capture.records),
                     sources,
                     require_profit_distinction=not focused_property or financial_context,
+                    records=capture.records,
                 )
+                if not property_request:
+                    fit_context = build_fit_context(
+                        capture.records, goals, question, prior_questions
+                    )
+                    issues.extend(fit_claim_issues(answer, fit_context))
                 if (
                     not direct
                     and not general_property
@@ -869,6 +909,11 @@ def investigate(
                         + "; ".join(issues)
                         + ". Retrieve missing records, cite each candidate's own exact source IDs, and "
                         "keep the answer under 300 words. Omit unsupported claims from your draft."
+                        + (
+                            "\nApplication-calculated criteria checks:\n" + json.dumps(fit_context)
+                            if not property_request
+                            else ""
+                        )
                     )
                 ]
         except Exception as error:
@@ -889,6 +934,11 @@ def investigate(
             answer = _facts_fallback(capture.records, required_ids)
         finally:
             runner.close()
+        if not property_request and capture.records:
+            fit_context = build_fit_context(capture.records, goals, question, prior_questions)
+            checks = format_fit_context(fit_context)
+            if checks:
+                answer += "\n\n" + checks
     sources = [source for record in capture.records.values() for source in record["sources"]]
     sources = list({source["id"]: source for source in sources}.values())
     calls = calls or prefetched_calls or capture.calls

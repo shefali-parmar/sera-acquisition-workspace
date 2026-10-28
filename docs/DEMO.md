@@ -36,6 +36,8 @@ Start Ollama with the configured model before trying this section. Response time
 
 Acquisition priorities guide assessments without changing deterministic search matches. Selected practices, supplied criteria and priorities inform the assistant; they do not turn a model's recommendation into completed due diligence.
 
+For a recommendation boundary check, compare Riverbend Dermatology and Elmbrook Skin Center with an asking price **strictly under $1,150,000** and **at least 1,000 active patients**. Neither meets both: Riverbend has 850 patients; Elmbrook equals the excluded price boundary. Change only the cap to **up to $1,150,000**: Elmbrook now meets these two numeric requirements. Inspect the application-calculated **Recorded criteria check** as well as the interpretation. A qualifying asking price excludes separate property and other acquisition costs.
+
 ## What this demonstration does not establish
 
 The assistant has produced unsupported judgments and wording stronger than the recorded evidence in development checks. A source citation can be valid while the surrounding interpretation is mistaken. Treat financial comparisons, legal interpretations and property recommendations as working material to verify. The complete observations and controlled checks are recorded in [VERIFICATION.md](../VERIFICATION.md).

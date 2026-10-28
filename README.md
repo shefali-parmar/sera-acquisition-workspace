@@ -84,6 +84,8 @@ Streamlit provides the Explore, Shortlists and Ask SERA screens. Pydantic valida
 
 For selected practices, Python retrieves the current records before synthesis. Open-ended discovery uses read-only LangChain tools. Investigations have a 60-second overall limit and at most one corrective revision. Specific evidence failures or incomplete synthesis retain recorded facts while withholding the recommendation. This reduces certain failure modes; it does not prove semantic accuracy.
 
+Python also calculates a **Recorded criteria check** from captured filters and supported explicit budget/patient-count changes. Strict price boundaries, missing prices and known failures remain visible separately from the model's interpretation. Narrow record checks catch attributable numeric discrepancies, misplaced citations, reversed metric comparisons and unsupported assurances. Complex prose, derived calculations and subjective rankings still require review; these checks are not a general semantic fact checker. See the [recommendation review](docs/RECOMMENDATION_REVIEW.md) for the tested cases and limits.
+
 Local named-list writes are validated, atomic and serialized between cooperating processes. Stale edits are rejected and damaged files are preserved. Public session storage retains the same validation and stale-edit checks without sharing lists between visitors.
 
 ## Development and verification
