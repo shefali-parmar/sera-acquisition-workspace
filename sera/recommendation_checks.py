@@ -1,7 +1,7 @@
 """Conservative checks for explicit record claims, not a semantic fact checker.
 
 Only locally attributable claims are checked. Ambiguous multi-practice prose,
-derived totals/ratios, subjective rankings, and buyer requirements need separate
+most derived totals/ratios, subjective rankings, and buyer requirements need separate
 checks. Passing these rules does not establish that an answer is grounded.
 """
 
@@ -15,6 +15,11 @@ _AMOUNT = re.compile(
     re.I,
 )
 _METRICS = (
+    (
+        "combined_price",
+        r"combined\s+(?:(?:practice|business)\s*(?:and|\+)\s*(?:property|building)\s+)?"
+        r"(?:asking[- ]price(?:\s+subtotal)?|purchase[- ]price)",
+    ),
     ("property_price", r"(?:property|real[- ]estate|building)\s+(?:(?:asking|purchase)\s+)?price"),
     ("rent_cam", r"(?:combined|total)\s+(?:annual\s+)?(?:rent\s*(?:and|\+)\s*CAM|occupancy cost)"),
     ("rent", r"(?:(?:annual|monthly)\s+)?(?:base\s+)?rent"),
@@ -145,6 +150,7 @@ def _field_sources(field: str, record: dict) -> set[str]:
             "cam": {premises},
             "rent_cam": {premises},
             "property_price": {premises},
+            "combined_price": {primary, premises},
         }[field]
         if source
     }
@@ -183,7 +189,15 @@ def _directional_issues(text: str, records: dict[str, dict]) -> list[str]:
         citations = {source.upper() for source in _CITATION.findall(text)}
         for pid in (left_id, right_id):
             allowed = _field_sources(field, records[pid])
-            if citations and allowed and not citations.intersection(allowed):
+            if (
+                citations
+                and allowed
+                and (
+                    not allowed.issubset(citations)
+                    if field == "combined_price"
+                    else not citations.intersection(allowed)
+                )
+            ):
                 issues.append(f"Cite {pid} {field} evidence from {', '.join(sorted(allowed))}.")
     return issues
 
@@ -214,6 +228,12 @@ def _expected(field: str, record: dict, context: str) -> float | None:
         "rent": premises.get("annual_base_rent"),
         "cam": premises.get("annual_cam"),
         "property_price": premises.get("property_asking_price"),
+        "combined_price": (
+            record["asking_price"] + premises["property_asking_price"]
+            if record.get("asking_price") is not None
+            and premises.get("property_asking_price") is not None
+            else None
+        ),
         "rent_cam": (
             premises["annual_base_rent"] + premises["annual_cam"]
             if premises.get("annual_base_rent") is not None
@@ -263,16 +283,17 @@ def _numeric_issues(text: str, pid: str, record: dict, *, header: str = "") -> l
         if _negated(clean, min(metric[0], amount.start())):
             continue
         before = clean[max(0, amount.start() - 35) : amount.start()]
-        # Buyer thresholds and illustrative combined transaction totals aren't record values.
+        # Buyer thresholds and general transaction totals aren't record values.
         if _THRESHOLD.search(before) and not re.search(r"\b(?:is|was|of|at)\s*$", before, re.I):
             continue
+        field = metric[2]
         if (
-            re.search(r"\b(combined|total|together|sum)\b", clean, re.I)
+            field != "combined_price"
+            and re.search(r"\b(combined|total|together|sum)\b", clean, re.I)
             and re.search(r"\b(practice|business)\b", clean, re.I)
             and re.search(r"\b(property|real[- ]estate|building)\b", clean, re.I)
         ):
             continue
-        field = metric[2]
         raw, scale = amount["number"].replace(",", ""), (amount["scale"] or "").casefold()
         value = float(raw) * (
             1_000_000 if scale in {"m", "million"} else 1_000 if scale in {"k", "thousand"} else 1
@@ -291,7 +312,15 @@ def _numeric_issues(text: str, pid: str, record: dict, *, header: str = "") -> l
         expected = _expected(field, record, context)
         citations = {source.upper() for source in _CITATION.findall(text)}
         allowed = _field_sources(field, record)
-        if citations and allowed and not citations.intersection(allowed):
+        if (
+            citations
+            and allowed
+            and (
+                not allowed.issubset(citations)
+                if field == "combined_price"
+                else not citations.intersection(allowed)
+            )
+        ):
             issues.append(f"Cite {pid} {field} evidence from {', '.join(sorted(allowed))}.")
         if expected is None or not math.isclose(value, expected, rel_tol=0.000001, abs_tol=0.01):
             recorded = (
@@ -310,8 +339,9 @@ def record_claim_issues(answer: str, records: dict[str, dict]) -> list[str]:
 
     Tables use their headers; prose needs an exact practice name/ID or one source
     owner in its clause. Multi-owner clauses are skipped rather than assigned by
-    guesswork. Questions, hypothetical values, thresholds and derived totals are
-    not factual assertions. This does not validate rankings or arbitrary prose.
+    guesswork. Questions, hypothetical values, thresholds and most derived totals
+    are not checked; explicitly combined asking/purchase prices are checked against
+    the practice plus property asking prices. This does not validate rankings or arbitrary prose.
     """
     issues, headers = [], []
     for line in answer.splitlines():

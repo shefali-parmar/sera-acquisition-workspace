@@ -4,7 +4,7 @@
 
 Reviewed the actual investigation path and ran controlled adversarial probes. Previously, four incorrect scripted answers could return `complete` despite valid citations: false budget fit, swapped EBITDA, exchanged row citations and guaranteed-profit language. These were validator failures, not four observed Gemini failures. Added record-derived criteria checks and narrow factual/source/assurance checks, preserving one repair and the existing facts-only fallback. Fixed definite selected-practice routing and comparison/property-footnote routing. See [case coverage and remaining limits](docs/RECOMMENDATION_REVIEW.md).
 
-The isolated Python 3.14 environment passed **469 tests in 12.30 seconds**, including 137 new recommendation regressions. Ruff lint, formatting (45 Python files), dependency consistency and offline evaluation passed (**5 passed, 6 live-only skipped**, no provider requests). Fourteen upstream deprecation warnings remain. Passing these checks does not establish arbitrary semantic correctness or production readiness.
+The isolated Python 3.14 environment passed **476 tests in 12.15 seconds**, including 144 new recommendation regressions. Ruff lint, formatting (45 Python files), dependency consistency and offline evaluation passed (**5 passed, 6 live-only skipped**, no provider requests). Fourteen upstream deprecation warnings remain. Passing these checks does not establish arbitrary semantic correctness or production readiness.
 
 October 27, 2026. This record applies only to this restored full-product working copy. The original archive, latest advisor and v2 are separate applications.
 

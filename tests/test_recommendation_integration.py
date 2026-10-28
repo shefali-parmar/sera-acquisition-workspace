@@ -1,5 +1,6 @@
 """Recommendation reliability at the investigation boundary; no provider calls."""
 
+import json
 from types import SimpleNamespace
 
 import pytest
@@ -166,3 +167,14 @@ def test_budget_followup_with_property_footer_keeps_application_criteria_checks(
     assert ai._general_property_request(
         "My budget is $1 million. Should I lease or buy a property?"
     )
+
+
+def test_subtotal_supplied_to_model_uses_separate_known_asking_prices_only():
+    record = json.loads(ai.get_practice_details.invoke({"practice_id": "SERA-025"}))
+    calculation = record["calculated_amounts"]
+    assert calculation["combined_practice_and_property_asking_subtotal"] == 1542000
+    assert calculation["sources"] == ["SERA-025-S1", "SERA-025-S5"]
+    assert "Not a valuation or total acquisition cost" in calculation["basis"]
+    for pid in ("SERA-001", "SERA-002"):
+        record = json.loads(ai.get_practice_details.invoke({"practice_id": pid}))
+        assert "calculated_amounts" not in record

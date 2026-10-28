@@ -12,6 +12,7 @@ The application now:
 - Supplies those calculations alongside fresh records and displays a separate **Recorded criteria check**. Priorities remain distinct from hard search criteria.
 - Checks locally attributable numeric facts, candidate/source ownership, metric-specific sources and narrow higher/lower comparisons against the retrieved records. It checks explicit unsupported profit, legal-clearance, landlord-consent and property-inclusion assurances.
 - Requests clarification for conflicting numeric bounds or ambiguous property-budget scope. An explicitly combined budget is kept separate from the practice asking-price check.
+- Supplies the arithmetic sum of known, separately recorded business/property asking prices. A locally reproduced checker bug that compared a correct combined subtotal against the business price alone is fixed; explicit combined asking-price statements are checked against both amounts and their sources. Other transaction costs remain excluded.
 - Allows one corrective revision. Repeated detected failures preserve recorded facts and withhold the recommendation. Failed drafts are excluded from retained conversation history.
 - Keeps an attached candidate for “Recommend the practice” and retains the acquisition comparison format when a later sentence asks to separate property prices.
 
@@ -27,6 +28,6 @@ The initial hosted baseline correctly rejected both Riverbend ($650,000; 850 pat
 
 ## Remaining limits
 
-These rules cover explicit, locally attributable statements. They do not prove arbitrary prose, cross-sentence associations, derived totals/ratios, valuation reasoning, subjective priority weighting or every possible recommendation. The deterministic check evaluates supported captured criteria and narrow recognized updates; other conversational requirements still require interpretation and buyer review. Open-ended discovery still relies on the model to translate the request into supported tool filters, and a returned subset is not proof of exhaustive search.
+These rules cover explicit, locally attributable statements. They do not prove arbitrary prose, cross-sentence associations, most derived totals/ratios, valuation reasoning, subjective priority weighting or every possible recommendation. The deterministic check evaluates supported captured criteria and narrow recognized updates; other conversational requirements still require interpretation and buyer review. Open-ended discovery still relies on the model to translate the request into supported tool filters, and a returned subset is not proof of exhaustive search.
 
 All evidence is fictional and seller/simulated reporting is not independent verification. A matching price/patient threshold does not establish financial health, legal clearance, valuation or suitability. Public-session request limits are not a billing ceiling. Preserve and review recorded facts when an AI assessment is incomplete.

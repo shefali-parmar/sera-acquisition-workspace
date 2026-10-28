@@ -166,3 +166,48 @@ def test_requires_financial_or_premises_source_for_its_metric(records):
         for issue in record_claim_issues("SERA-001 annual rent is $43,200 [SERA-001-S1].", records)
     )
     assert not record_claim_issues("SERA-001 annual revenue is $850k [SERA-001-S4].", records)
+
+
+@pytest.mark.parametrize(
+    "label",
+    [
+        "combined asking-price subtotal",
+        "combined asking price",
+        "combined purchase price",
+        "combined practice and property asking-price subtotal",
+    ],
+)
+def test_combined_price_checks_recorded_sum_and_both_sources(records, label):
+    prefix = f"Elmbrook Skin Center {label} is "
+    citations = " [SERA-025-S1] [SERA-025-S5]."
+    assert not record_claim_issues(prefix + "$1,542,000" + citations, records)
+    assert any(
+        "combined_price" in issue and "1,542,000" in issue
+        for issue in record_claim_issues(prefix + "$1,500,000" + citations, records)
+    )
+    for source in ("SERA-025-S1", "SERA-025-S5"):
+        assert any(
+            "Cite" in issue
+            for issue in record_claim_issues(prefix + f"$1,542,000 [{source}].", records)
+        )
+
+
+def test_combined_price_table_header_and_missing_property_price(records):
+    header = "| Practice | Combined asking-price subtotal |\n|---|---|\n"
+    citations = "[SERA-025-S1] [SERA-025-S5]"
+    assert not record_claim_issues(
+        header + f"| Elmbrook Skin Center | $1.542m {citations} |", records
+    )
+    assert record_claim_issues(header + f"| Elmbrook Skin Center | $1.5m {citations} |", records)
+    assert record_claim_issues(
+        "SERA-001 combined asking price is $650,000 [SERA-001-S1] [SERA-001-S5].", records
+    )
+
+
+def test_unqualified_asking_price_subtotal_is_not_assumed_combined(records):
+    assert record_claim_issues(
+        "SERA-025 asking-price subtotal is $1,542,000 [SERA-025-S1] [SERA-025-S5].", records
+    )
+    assert not record_claim_issues(
+        "SERA-025 asking-price subtotal is $1,150,000 [SERA-025-S1].", records
+    )

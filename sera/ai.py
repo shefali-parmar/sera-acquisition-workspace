@@ -266,6 +266,20 @@ def get_practice_details(practice_id: str) -> str:
     if not p:
         return json.dumps({"error": "Unknown practice ID"})
     record = p.model_dump()
+    if (
+        p.asking_price is not None
+        and p.premises is not None
+        and p.premises.property_asking_price is not None
+    ):
+        record["calculated_amounts"] = {
+            "combined_practice_and_property_asking_subtotal": (
+                p.asking_price + p.premises.property_asking_price
+            ),
+            "sources": [p.availability_source, p.premises.source],
+            "basis": "Arithmetic sum of the separately recorded asking prices only; "
+            "excludes financing, taxes, fees, fit-out, working capital and other costs. "
+            "Not a valuation or total acquisition cost.",
+        }
     # Explicit evidence limits help small local models distinguish unknowns and proxies.
     record["interpretation_limits"] = {
         "financial": (
