@@ -6,6 +6,10 @@ Reviewed the actual investigation path and ran controlled adversarial probes. Pr
 
 The isolated Python 3.14 environment passed **476 tests in 12.15 seconds**, including 144 new recommendation regressions. Ruff lint, formatting (45 Python files), dependency consistency and offline evaluation passed (**5 passed, 6 live-only skipped**, no provider requests). Fourteen upstream deprecation warnings remain. Passing these checks does not establish arbitrary semantic correctness or production readiness.
 
+The published release `7fc9ef1` passed [GitHub Linux checks](https://github.com/shefali-parmar/sera-acquisition-workspace/actions/runs/40616701766). Actual public Gemini tests verified strict versus inclusive cap changes, three-candidate failed/matched/unverified distinctions, and changing priorities from higher EBITDA to lower entry price without changing hard eligibility. The three-candidate working-notes export was downloaded and reopened successfully. [Hosted comparison](docs/images/recommendation-three-practices.png).
+
+Completion limits remain: broader cost/priority and legal/consent prompts sometimes returned facts only. A combined business/property/legal request still fell back after the final fix and fresh host reboot; both asking prices remained available, but the requested explanation was not completed. The locally proven combined-subtotal validation bug is fixed; the exact cause of the discarded live draft is unconfirmed. [Incomplete-answer evidence](docs/images/recommendation-incomplete.png). These observations prevent claiming full AI reliability. See the detailed case-by-case review above for scope and limitations.
+
 October 27, 2026. This record applies only to this restored full-product working copy. The original archive, latest advisor and v2 are separate applications.
 
 ## Engineering review and comparison wording — October 27, 2026
