@@ -267,3 +267,15 @@ def test_asking_price_does_not_establish_full_cost_or_cash_required(records, ans
 )
 def test_correct_asking_price_priority_and_unknown_full_cost_are_preserved(records, answer):
     assert not record_claim_issues(answer, records)
+
+
+@pytest.mark.parametrize(
+    "answer",
+    [
+        "Riverbend Dermatology's lower total acquisition cost is not established [SERA-001-S1].",
+        "Riverbend Dermatology's lower initial capital outlay cannot be established [SERA-001-S1].",
+        "Don't assume Riverbend Dermatology has lower initial capital outlay [SERA-001-S1].",
+    ],
+)
+def test_cost_warning_is_not_a_lower_cost_assurance(records, answer):
+    assert not record_claim_issues(answer, records)

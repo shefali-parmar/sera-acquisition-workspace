@@ -778,6 +778,8 @@ def _log_incomplete(failure_kind: str, issues: list[str]) -> None:
             r"clearance|consent|included|separately priced|guarantee|purchase instructions",
         ),
         ("criteria_fit", r"requirement|cap|budget|fit"),
+        ("numeric_value", r"^Correct SERA-"),
+        ("cost_scope", r"^Compare recorded asking prices only"),
         ("record_value", r"recorded|comparison"),
     )
     labels = sorted(

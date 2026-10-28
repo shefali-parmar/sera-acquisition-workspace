@@ -69,7 +69,7 @@ def _negated(text: str, start: int) -> bool:
     # Keep negation local; unrelated earlier disclaimers cannot exempt a later claim.
     return bool(
         re.search(
-            r"\b(?:no|not|never|neither|cannot|can't|without|isn't|aren't|wasn't|hasn't|haven't)"
+            r"\b(?:no|not|never|neither|cannot|can't|don't|doesn't|without|isn't|aren't|wasn't|hasn't|haven't)"
             r"(?:\s+[\w'-]+){0,6}\s*$",
             prefix,
             re.I,
@@ -379,7 +379,12 @@ def record_claim_issues(answer: str, records: dict[str, dict]) -> list[str]:
                 unit,
                 re.I,
             ):
-                if explicit and not _guidance(unit) and not _negated(unit, match.start()):
+                if (
+                    explicit
+                    and not _guidance(unit)
+                    and not _negated(unit, match.start())
+                    and not _denied_after(unit[match.end() :])
+                ):
                     issues.append(
                         "Compare recorded asking prices only; total acquisition cost and upfront capital "
                         "are not established by a lower asking price."
